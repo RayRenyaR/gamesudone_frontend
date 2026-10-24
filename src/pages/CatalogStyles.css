@@ -1,0 +1,700 @@
+/* =========================================================
+   NUEVA PALETA DE COLORES RETRO Y ESTILO CON RELIEVE (FRIV)
+   ========================================================= */
+:root {
+  --color-amarillo: #E09F3E;     /* Hunyadi yellow */
+  --color-rojo-auburn: #9E2A2B;  /* Auburn */
+  --color-azul-pizarra: #335C67; /* Dark slate gray */
+  --color-vainilla: #FFF3B0;     /* Vanilla */
+  --color-fondo-profundo: #1D353C; /* Derivado oscuro para contraste */
+  
+  /* Sombras y relieves suaves tipo Friv */
+  --relieve-tarjeta: 0 6px 0 rgba(15, 30, 35, 0.7), 0 8px 16px rgba(0, 0, 0, 0.35), inset 0 2px 2px rgba(255, 255, 255, 0.25);
+  --relieve-boton: 0 4px 0 rgba(0, 0, 0, 0.45), inset 0 2px 2px rgba(255, 255, 255, 0.35);
+  --relieve-hundido: inset 0 3px 6px rgba(0, 0, 0, 0.5);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.catalog-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: radial-gradient(circle at top, var(--color-azul-pizarra), var(--color-fondo-profundo));
+  color: var(--color-vainilla);
+}
+
+/* =========================================================
+   BARRA SUPERIOR FIJA (SOLUCIÓN AL PROBLEMA DE SCROLL)
+   ========================================================= */
+.top-navbar {
+  position: sticky; /* Hace que nunca desaparezca al bajar */
+  top: 0;
+  z-index: 1000;    /* Siempre por encima de las tarjetas */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 28px;
+  height: 72px;
+  background: linear-gradient(180deg, #3f707d 0%, var(--color-azul-pizarra) 100%);
+  border-bottom: 3px solid var(--color-vainilla);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+}
+
+.logo-box {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--color-vainilla);
+  cursor: pointer;
+  text-shadow: 2px 2px 0px var(--color-rojo-auburn);
+  letter-spacing: 1px;
+}
+
+.search-container {
+  display: flex;
+  align-items: center;
+  background-color: var(--color-fondo-profundo);
+  border: 2px solid var(--color-vainilla);
+  border-radius: 30px;
+  padding: 8px 18px;
+  width: 45%;
+  max-width: 520px;
+  box-shadow: var(--relieve-hundido);
+}
+
+.search-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--color-vainilla);
+  width: 100%;
+  font-size: 1rem;
+}
+
+.search-input::placeholder {
+  color: rgba(255, 243, 176, 0.6);
+}
+
+.profile-btn {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, var(--color-amarillo), #c48225);
+  border: 2px solid var(--color-vainilla);
+  color: var(--color-fondo-profundo);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  box-shadow: var(--relieve-boton);
+  transition: transform 0.15s ease;
+}
+
+.profile-btn:hover {
+  transform: translateY(-2px);
+}
+
+/* =========================================================
+   BARRA LATERAL CON BOTÓN TIPO "FICHA" PARA OCULTAR/MOSTRAR
+   ========================================================= */
+.main-body {
+  display: flex;
+  flex: 1;
+  position: relative;
+}
+
+.sidebar-wrapper {
+  position: sticky;
+  top: 72px;
+  height: calc(100vh - 72px);
+  z-index: 900;
+  display: flex;
+  align-items: flex-start;
+}
+
+.left-sidebar {
+  width: 245px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--color-azul-pizarra) 0%, var(--color-fondo-profundo) 100%);
+  border-right: 3px solid var(--color-vainilla);
+  display: flex;
+  flex-direction: column;
+  transition: width 0.3s ease, opacity 0.25s ease;
+  overflow: hidden;
+  box-shadow: 4px 0 15px rgba(0, 0, 0, 0.35);
+}
+
+/* Estado cuando la barra está oculta */
+.left-sidebar.collapsed {
+  width: 0px;
+  border-right: none;
+  opacity: 0;
+}
+
+/* Botón tipo ficha que sobresale en la parte superior */
+.sidebar-ficha-btn {
+  margin-top: 14px;
+  width: 36px;
+  height: 44px;
+  background: linear-gradient(180deg, var(--color-amarillo), #c78424);
+  color: var(--color-fondo-profundo);
+  border: 3px solid var(--color-vainilla);
+  border-left: none;
+  border-radius: 0 22px 22px 0;
+  cursor: pointer;
+  font-weight: 900;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.45);
+  transition: transform 0.15s ease, background 0.2s ease;
+}
+
+.sidebar-ficha-btn:hover {
+  background: var(--color-rojo-auburn);
+  color: var(--color-vainilla);
+}
+
+.sidebar-top-groups {
+  padding: 16px;
+  border-bottom: 3px solid var(--color-vainilla);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 240px;
+}
+
+.sidebar-bottom-categories {
+  padding: 16px;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 240px;
+}
+
+.sidebar-title {
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin-bottom: 6px;
+  color: var(--color-vainilla);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
+  border-bottom: 2px solid rgba(255, 243, 176, 0.3);
+  padding-bottom: 4px;
+}
+
+.nav-item-btn, .category-btn {
+  text-align: left;
+  background: linear-gradient(180deg, #274851, var(--color-fondo-profundo));
+  color: var(--color-vainilla);
+  border: 2px solid rgba(255, 243, 176, 0.4);
+  padding: 9px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  box-shadow: var(--relieve-boton);
+  transition: all 0.15s ease;
+}
+
+.nav-item-btn:hover, .category-btn:hover {
+  background: linear-gradient(180deg, var(--color-amarillo), #c78424);
+  color: var(--color-fondo-profundo);
+  font-weight: bold;
+  transform: translateY(-2px);
+}
+
+.category-btn.active, .nav-item-btn.active {
+  background: linear-gradient(180deg, #b83234, var(--color-rojo-auburn));
+  color: var(--color-vainilla);
+  border-color: var(--color-vainilla);
+  font-weight: bold;
+}
+
+/* =========================================================
+   CONTENIDO PRINCIPAL Y CARRUSEL DE RECOMENDADOS (STEAM)
+   ========================================================= */
+.catalog-content {
+  flex: 1;
+  padding: 24px 36px;
+  overflow-x: hidden;
+  position: relative;
+}
+
+.section-header {
+  font-size: 1.8rem;
+  font-weight: 800;
+  margin-bottom: 16px;
+  color: var(--color-vainilla);
+  text-shadow: 2px 3px 0px rgba(0, 0, 0, 0.5);
+}
+
+.recomendados-section {
+  border-bottom: 2px solid rgba(255, 243, 176, 0.3);
+  padding-bottom: 28px;
+  margin-bottom: 28px;
+}
+
+.carousel-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  max-width: 820px;
+  margin: 0 auto;
+}
+
+.carousel-arrow-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, var(--color-amarillo), #b8761b);
+  color: var(--color-fondo-profundo);
+  border: 3px solid var(--color-vainilla);
+  font-size: 1.4rem;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: var(--relieve-boton);
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+.carousel-arrow-btn:hover {
+  background: var(--color-rojo-auburn);
+  color: var(--color-vainilla);
+  transform: scale(1.08);
+}
+
+.carousel-main-frame {
+  flex: 1;
+  max-width: 660px;
+}
+
+.carousel-indicators {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.carousel-dots {
+  display: flex;
+  gap: 8px;
+}
+
+.carousel-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background-color: rgba(255, 243, 176, 0.3);
+  border: 2px solid var(--color-vainilla);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.carousel-dot.active {
+  background-color: var(--color-amarillo);
+  transform: scale(1.25);
+  box-shadow: 0 0 8px var(--color-amarillo);
+}
+
+.carousel-counter-text {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: var(--color-vainilla);
+  opacity: 0.9;
+}
+
+/* =========================================================
+   CUADRÍCULA DE JUEGOS Y TARJETAS CON RELIEVE (FRIV)
+   ========================================================= */
+.games-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 24px;
+}
+
+.game-card-wrapper {
+  position: relative;
+}
+
+.game-card {
+  background: linear-gradient(180deg, var(--color-azul-pizarra), var(--color-fondo-profundo));
+  border: 3px solid var(--color-vainilla);
+  border-radius: 16px; /* Bordes redondeados suaves estilo Friv */
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: var(--relieve-tarjeta);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.game-card:hover {
+  transform: translateY(-5px) scale(1.02);
+  border-color: var(--color-amarillo);
+  box-shadow: 0 10px 0 rgba(15, 30, 35, 0.8), 0 14px 24px rgba(0, 0, 0, 0.5);
+}
+
+.game-card-title-bar {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.65));
+  padding: 8px 12px;
+  font-weight: bold;
+  font-size: 0.95rem;
+  border-bottom: 2px solid var(--color-vainilla);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+.game-card-cover {
+  width: 100%;
+  height: 155px;
+  object-fit: cover;
+  display: block;
+}
+
+.game-card.featured .game-card-cover {
+  height: 290px;
+}
+
+.game-card.featured .game-card-title-bar {
+  font-size: 1.25rem;
+  padding: 10px 16px;
+}
+
+/* Recuadro emergente (1.5s) */
+.hover-details-popup {
+  position: absolute;
+  top: -10px;
+  left: 60%;
+  width: 270px;
+  background: linear-gradient(180deg, var(--color-fondo-profundo), #122227);
+  border: 3px solid var(--color-amarillo);
+  border-radius: 16px;
+  padding: 16px;
+  z-index: 500;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.8);
+  cursor: default;
+}
+
+.popup-title {
+  font-size: 1.15rem;
+  font-weight: bold;
+  color: var(--color-amarillo);
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 243, 176, 0.3);
+  padding-bottom: 4px;
+}
+
+.popup-text {
+  font-size: 0.88rem;
+  margin-bottom: 8px;
+  line-height: 1.35;
+}
+
+.popup-play-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 9px 14px;
+  background: linear-gradient(180deg, #b83234, var(--color-rojo-auburn));
+  color: var(--color-vainilla);
+  border: 2px solid var(--color-vainilla);
+  border-radius: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: var(--relieve-boton);
+}
+
+.popup-play-btn:hover {
+  background: linear-gradient(180deg, var(--color-amarillo), #c78424);
+  color: var(--color-fondo-profundo);
+}
+
+/* =========================================================
+   PESTAÑA DE JUEGO (BOCETO PESTAÑA DE JUEGO.JPEG)
+   ========================================================= */
+.player-view-wrapper {
+  position: relative;
+  min-height: calc(100vh - 120px);
+  border-radius: 20px;
+  overflow: hidden;
+  padding: 28px;
+  border: 3px solid rgba(255, 243, 176, 0.35);
+  box-shadow: var(--relieve-tarjeta);
+}
+
+/* Fondo con la portada del juego difuminada */
+.player-blurred-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  filter: blur(24px) brightness(0.42);
+  transform: scale(1.12);
+  z-index: 0;
+}
+
+.player-foreground-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.player-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.player-game-title {
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--color-vainilla);
+  text-shadow: 2px 3px 0px var(--color-rojo-auburn);
+}
+
+.back-catalog-btn {
+  background: linear-gradient(180deg, var(--color-azul-pizarra), var(--color-fondo-profundo));
+  color: var(--color-vainilla);
+  border: 2px solid var(--color-vainilla);
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: var(--relieve-boton);
+}
+
+.back-catalog-btn:hover {
+  background: var(--color-amarillo);
+  color: var(--color-fondo-profundo);
+}
+
+/* Fila superior: Ventana del juego + Tabla Ranked */
+.player-main-stage {
+  display: flex;
+  gap: 24px;
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+.game-screen-column {
+  flex: 3;
+  min-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.game-window-frame {
+  width: 100%;
+  height: 430px;
+  background-color: #0d191d;
+  border: 4px solid var(--color-vainilla);
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: var(--relieve-tarjeta);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.game-preview-overlay {
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-blend-mode: darken;
+  background-color: rgba(0, 0, 0, 0.45);
+  gap: 14px;
+}
+
+.game-iframe-active {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* Tabla Ranked (1 al 10) a la derecha */
+.ranked-sidebar-box {
+  flex: 1;
+  min-width: 240px;
+  background: rgba(29, 53, 60, 0.88);
+  border: 3px solid var(--color-vainilla);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: var(--relieve-tarjeta);
+  display: flex;
+  flex-direction: column;
+}
+
+.ranked-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--color-amarillo);
+  text-align: center;
+  border-bottom: 2px solid var(--color-vainilla);
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+
+.ranked-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ranked-item {
+  display: flex;
+  justify-content: space-between;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 0.92rem;
+  border: 1px solid rgba(255, 243, 176, 0.2);
+}
+
+/* Barra de botones debajo de la ventana del juego */
+.player-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(29, 53, 60, 0.92);
+  border: 3px solid var(--color-vainilla);
+  border-radius: 14px;
+  padding: 12px 18px;
+  flex-wrap: wrap;
+  gap: 14px;
+  box-shadow: var(--relieve-tarjeta);
+}
+
+.action-btn {
+  background: linear-gradient(180deg, var(--color-azul-pizarra), var(--color-fondo-profundo));
+  color: var(--color-vainilla);
+  border: 2px solid var(--color-vainilla);
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: var(--relieve-boton);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.action-btn:hover:not(:disabled) {
+  background: var(--color-amarillo);
+  color: var(--color-fondo-profundo);
+}
+
+.action-btn.saved {
+  background: var(--color-amarillo);
+  color: var(--color-fondo-profundo);
+}
+
+.action-btn.play-main {
+  background: linear-gradient(180deg, #b83234, var(--color-rojo-auburn));
+  font-size: 1.05rem;
+  padding: 10px 26px;
+}
+
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Bloque de Likes / Dislikes + Barra de porcentaje */
+.votes-widget {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 155px;
+}
+
+.votes-buttons-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.vote-btn {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.4);
+  color: var(--color-vainilla);
+  border: 2px solid var(--color-vainilla);
+  border-radius: 8px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.vote-btn.active-like {
+  background-color: var(--color-amarillo);
+  color: var(--color-fondo-profundo);
+}
+
+.vote-btn.active-dislike {
+  background-color: var(--color-rojo-auburn);
+  color: var(--color-vainilla);
+}
+
+.likes-progress-bar {
+  width: 100%;
+  height: 10px;
+  background-color: var(--color-rojo-auburn);
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--color-vainilla);
+}
+
+.likes-fill {
+  height: 100%;
+  background-color: var(--color-amarillo);
+  transition: width 0.3s ease;
+}
+
+.likes-percent-label {
+  font-size: 0.75rem;
+  text-align: center;
+  color: var(--color-vainilla);
+}
+
+.right-icon-group {
+  display: flex;
+  gap: 10px;
+}
+
+/* Recuadro inferior: Descripción y Cómo Jugar */
+.description-controls-box {
+  background: rgba(29, 53, 60, 0.9);
+  border: 3px solid var(--color-vainilla);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: var(--relieve-tarjeta);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.desc-box-title {
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: var(--color-amarillo);
+  border-bottom: 2px solid rgba(255, 243, 176, 0.3);
+  padding-bottom: 6px;
+}
