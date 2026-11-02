@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { type Game, type ScoreEntry } from './GameCard';
 
 const API_BASE_URL = 'http://localhost:8080/api';
-// Usuario de prueba activo en ludustard_db (id: 3 -> laura_gamer)
 const CURRENT_USER_ID = 3;
 
 interface GamePlayerViewProps {
@@ -15,17 +14,17 @@ export const GamePlayerView: React.FC<GamePlayerViewProps> = ({ game, onBack }) 
   const [isSaved, setIsSaved] = useState<boolean>(false);
   const [likes, setLikes] = useState<number>(game.likes);
   const [dislikes, setDislikes] = useState<number>(game.dislikes);
-  const [userVote, setUserVote] = useState<'LIKE' | 'DISLIKE' | null>(null);
+  const [userVote, setUserVote] = useState<'LIKE' | 'DISLIKE' | 'NONE'>('NONE');
   const [leaderboard, setLeaderboard] = useState<ScoreEntry[]>([]);
   const [lastGodotScore, setLastGodotScore] = useState<number | null>(null);
 
   const gameScreenRef = useRef<HTMLDivElement | null>(null);
 
-  // 1. Función para cargar el Top 10 desde GET /api/scores/leaderboard/{alias}
+  // 1. Cargar el Top 10 desde GET /api/scores/leaderboard/{alias}
   const fetchLeaderboard = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/scores/leaderboard/${game.alias}`);
-      if (!response.ok) throw new Error('Respuesta no OK');
+      if (!response.ok) throw new Error('Error al obtener leaderboard');
       const data = await response.json();
 
       const mappedScores: ScoreEntry[] = Array.isArray(data)
@@ -36,7 +35,6 @@ export const GamePlayerView: React.FC<GamePlayerViewProps> = ({ game, onBack }) 
         : [];
       setLeaderboard(mappedScores);
     } catch {
-      // Datos de respaldo si aún no hay puntajes registrados en MySQL
       setLeaderboard([
         { player: 'laura_gamer', score: 950 },
         { player: 'juanito99', score: 820 },
@@ -45,11 +43,48 @@ export const GamePlayerView: React.FC<GamePlayerViewProps> = ({ game, onBack }) 
     }
   }, [game.alias]);
 
+  // 2. Cargar estado inicial al abrir el juego (Favoritos y Voto previo del usuario 3)
   useEffect(() => {
     fetchLeaderboard();
-  }, [fetchLeaderboard]);
 
-  // 2. Escuchar el evento postMessage de Godot cuando termina la partida (GAME_OVER)
+    const fetchInitialUserStatus = async () => {
+      // Consultar si el juego actual está en la lista de favoritos del usuario
+      try {
+        const favRes = await fetch(`${API_BASE_URL}/favorites/user/${CURRENT_USER_ID}`);
+        if (favRes.ok) {
+          const favIds: number[] = await favRes.json();
+          if (Array.isArray(favIds)) {
+            setIsSaved(favIds.includes(game.id));
+          }
+        }
+      } catch {
+        console.warn('No se pudo verificar favoritos iniciales.');
+      }
+
+      // Consultar el voto previo del usuario en este juego (LIKE, DISLIKE o NONE)
+      try {
+        const voteRes = await fetch(
+          `${API_BASE_URL}/votes/user/${CURRENT_USER_ID}/game/${game.id}`
+        );
+        if (voteRes.ok) {
+          const voteData = await voteRes.json();
+          if (
+            voteData?.voteType === 'LIKE' ||
+            voteData?.voteType === 'DISLIKE' ||
+            voteData?.voteType === 'NONE'
+          ) {
+            setUserVote(voteData.voteType);
+          }
+        }
+      } catch {
+        console.warn('No se pudo verificar el voto previo del usuario.');
+      }
+    };
+
+    fetchInitialUserStatus();
+  }, [game.id, fetchLeaderboard]);
+
+  // 3. Escuchar el evento postMessage de Godot cuando termina la partida (GAME_OVER)
   useEffect(() => {
     const handleGameMessage = async (event: MessageEvent) => {
       if (event.data?.type === 'GAME_OVER') {
@@ -71,7 +106,6 @@ export const GamePlayerView: React.FC<GamePlayerViewProps> = ({ game, onBack }) 
               gameMode,
             }),
           });
-          // Refrescamos el Top 10 en vivo tras guardar la puntuación en MySQL
           fetchLeaderboard();
         } catch (err) {
           console.error('Error al guardar puntaje en el backend:', err);
@@ -83,16 +117,44 @@ export const GamePlayerView: React.FC<GamePlayerViewProps> = ({ game, onBack }) 
     return () => window.removeEventListener('message', handleGameMessage);
   }, [game.alias, fetchLeaderboard]);
 
-  // 3. Enviar Like / Dislike a POST http://localhost:8080/api/votes
-  const sendVoteToBackend = async (voteType: 'LIKE' | 'DISLIKE') => {
+  // 4. Conectar botón "☆ Favorito" a POST /api/favorites
+  const handleToggleFavorite = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/favorites`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: CURRENT_USER_ID,
+          gameId: game.id,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.status === 'added') {
+          setIsSaved(true);
+          return;
+        } else if (data.status === 'removed') {
+          setIsSaved(false);
+          return;
+        }
+      }
+    } catch {
+      console.warn('Backend no disponible, alternando favorito localmente.');
+    }
+    setIsSaved((prev) => !prev);
+  };
+
+  // 5. Conectar botones Like / Dislike a POST /api/votes
+  const sendVoteToBackend = async (clickedVote: 'LIKE' | 'DISLIKE') => {
     try {
       const response = await fetch(`${API_BASE_URL}/votes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          gameId: game.id,
           userId: CURRENT_USER_ID,
-          voteType,
+          gameId: game.id,
+          voteType: clickedVote,
         }),
       });
 
@@ -100,22 +162,32 @@ export const GamePlayerView: React.FC<GamePlayerViewProps> = ({ game, onBack }) 
         const result = await response.json();
         if (typeof result.likes === 'number') setLikes(result.likes);
         if (typeof result.dislikes === 'number') setDislikes(result.dislikes);
-        setUserVote(voteType);
+        setUserVote((prev) => (prev === clickedVote ? 'NONE' : clickedVote));
         return;
       }
     } catch {
       console.warn('Backend no disponible, actualizando voto localmente.');
     }
 
-    // Respaldo optimista en caso de que el servidor esté apagado durante pruebas
-    if (voteType === 'LIKE') {
-      if (userVote === 'DISLIKE') setDislikes((d) => Math.max(0, d - 1));
-      if (userVote !== 'LIKE') setLikes((l) => l + 1);
-      setUserVote('LIKE');
+    // Respaldo local si el backend está apagado
+    if (clickedVote === 'LIKE') {
+      if (userVote === 'LIKE') {
+        setLikes((l) => Math.max(0, l - 1));
+        setUserVote('NONE');
+      } else {
+        if (userVote === 'DISLIKE') setDislikes((d) => Math.max(0, d - 1));
+        setLikes((l) => l + 1);
+        setUserVote('LIKE');
+      }
     } else {
-      if (userVote === 'LIKE') setLikes((l) => Math.max(0, l - 1));
-      if (userVote !== 'DISLIKE') setDislikes((d) => d + 1);
-      setUserVote('DISLIKE');
+      if (userVote === 'DISLIKE') {
+        setDislikes((d) => Math.max(0, d - 1));
+        setUserVote('NONE');
+      } else {
+        if (userVote === 'LIKE') setLikes((l) => Math.max(0, l - 1));
+        setDislikes((d) => d + 1);
+        setUserVote('DISLIKE');
+      }
     }
   };
 
@@ -185,7 +257,6 @@ export const GamePlayerView: React.FC<GamePlayerViewProps> = ({ game, onBack }) 
                   </button>
                 </div>
               ) : (
-                /* 4. Contenedor <iframe /> real conectado a la exportación HTML5 de Godot */
                 <iframe
                   src={game.gameUrl || '/game-export/index.html'}
                   title={game.title}
@@ -198,11 +269,12 @@ export const GamePlayerView: React.FC<GamePlayerViewProps> = ({ game, onBack }) 
             </div>
 
             <div className="player-action-bar">
+              {/* Botón cambiado de Guardar a Favorito y conectado a POST /api/favorites */}
               <button
                 className={`action-btn ${isSaved ? 'saved' : ''}`}
-                onClick={() => setIsSaved(!isSaved)}
+                onClick={handleToggleFavorite}
               >
-                {isSaved ? '★ Guardado' : '☆ Guardar'}
+                {isSaved ? '★ Favorito' : '☆ Favorito'}
               </button>
 
               <div className="votes-widget">
@@ -290,7 +362,13 @@ export const GamePlayerView: React.FC<GamePlayerViewProps> = ({ game, onBack }) 
           </p>
           <p>
             <strong>Categorías:</strong> {game.categories.join(', ')} |{' '}
-            <strong>Edad recomendada:</strong> {game.ageRating}
+            <strong>Edad recomendada:</strong>{' '}
+            <span
+              className="age-rating-badge"
+              style={{ backgroundColor: game.ageBadgeColor || '#28a745' }}
+            >
+              {game.ageRatingName}
+            </span>
           </p>
         </section>
       </div>

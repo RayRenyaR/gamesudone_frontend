@@ -6,7 +6,6 @@ import './CatalogStyles.css';
 
 const API_BASE_URL = 'http://localhost:8080/api';
 
-// Enlaces corregidos según pagina principal corregida.jpg (Gacha y Ranked separados, sin Chat fijo)
 const GROUP_LINKS = [
   { id: 'catalogo', label: 'Catálogo (Inicio)' },
   { id: 'foro', label: 'Foro (Grupo Cyan)' },
@@ -16,26 +15,16 @@ const GROUP_LINKS = [
   { id: 'ranked', label: 'Ranked (Cyan)' },
 ];
 
-// Categorías oficiales de la tabla `categories` en base de datos.sql
-const CATEGORY_MAP: Record<number, string> = {
-  1: '2 Jugadores',
-  2: 'Autos y Carreras',
-  3: 'Acción y Disparos',
-  4: 'Chicas y Cocina',
-  5: 'Puzzles y Lógica',
-  6: 'Deportes y Fútbol',
-};
+const DEFAULT_CATEGORIES = [
+  '2 Jugadores',
+  'Autos y Carreras',
+  'Acción y Disparos',
+  'Chicas y Cocina',
+  'Puzzles y Lógica',
+  'Deportes y Fútbol',
+];
 
-// Clasificaciones oficiales de la tabla `age_ratings` en base de datos.sql
-const AGE_RATING_MAP: Record<number, string> = {
-  1: 'Para todos (+3)',
-  2: 'Niños (+7)',
-  3: 'Adolescentes (+12)',
-};
-
-const ALL_CATEGORIES = Object.values(CATEGORY_MAP);
-
-// Respaldo fiel a `ludustard_db` con GIFs animados por si el backend 8080 está apagado
+// Datos de respaldo por si pruebas la interfaz antes de encender Spring Boot
 const FALLBACK_DB_GAMES: Game[] = [
   {
     id: 4,
@@ -44,9 +33,10 @@ const FALLBACK_DB_GAMES: Game[] = [
     description: 'Colección frenética de microjuegos bizarros al estilo WarioWare.',
     controls: 'Ratón (Clic y Movimiento) y Teclado',
     categories: ['Acción y Disparos'],
-    ageRating: 'Niños (+7)',
-    coverUrl: 'https://placehold.co/650x350/335C67/FFF3B0?text=UDOWare+(Portada)',
-    previewGifUrl: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbzh6dTRxN2R5b3k0ZzB2enN3eHBrbmJ4NnZpcnZ5amN6eSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/13HgwGsXF0aiGY/giphy.gif',
+    ageRatingName: 'Niños (+7)',
+    ageBadgeColor: '#ffc107',
+    coverUrl: 'https://placehold.co/650x350/335C67/FFF3B0?text=UDOWare',
+    previewUrl: 'https://media.giphy.com/media/13HgwGsXF0aiGY/giphy.gif',
     gameUrl: '/game-export/index.html',
     tipo: 'WEB',
     isRecommended: true,
@@ -61,9 +51,10 @@ const FALLBACK_DB_GAMES: Game[] = [
     description: 'Aventura cooperativa de puzzle en el templo del bosque.',
     controls: 'WASD para Watergirl y Flechas para Fireboy',
     categories: ['2 Jugadores', 'Puzzles y Lógica'],
-    ageRating: 'Para todos (+3)',
+    ageRatingName: 'Para todos (+3)',
+    ageBadgeColor: '#28a745',
     coverUrl: 'https://placehold.co/650x350/1D353C/E09F3E?text=Fireboy+%26+Watergirl',
-    previewGifUrl: 'https://media.giphy.com/media/l0HlNaQ6gWfllcjDO/giphy.gif',
+    previewUrl: 'https://media.giphy.com/media/l0HlNaQ6gWfllcjDO/giphy.gif',
     gameUrl: 'https://cdn.ludustard.com/games/fireboy/index.html',
     tipo: 'WEB',
     isRecommended: true,
@@ -78,9 +69,10 @@ const FALLBACK_DB_GAMES: Game[] = [
     description: 'Carreras de motos acrobáticas con obstáculos peligrosos.',
     controls: 'Flecha arriba acelera, laterales balancean',
     categories: ['Autos y Carreras'],
-    ageRating: 'Niños (+7)',
+    ageRatingName: 'Niños (+7)',
+    ageBadgeColor: '#ffc107',
     coverUrl: 'https://placehold.co/650x350/9E2A2B/FFF3B0?text=Moto+X3M+Cyber+Race',
-    previewGifUrl: 'https://media.giphy.com/media/3o7TKtnuHOHHUjR38Y/giphy.gif',
+    previewUrl: 'https://media.giphy.com/media/3o7TKtnuHOHHUjR38Y/giphy.gif',
     gameUrl: 'https://cdn.ludustard.com/games/motox3m/index.html',
     tipo: 'WEB',
     isRecommended: true,
@@ -95,9 +87,10 @@ const FALLBACK_DB_GAMES: Game[] = [
     description: 'Juego de peleas 3D multijugador con gráficos de alta fidelidad.',
     controls: 'Requiere descargar el launcher. Compatible con teclado o mando USB.',
     categories: ['Acción y Disparos'],
-    ageRating: 'Adolescentes (+12)',
+    ageRatingName: 'Adolescentes (+12)',
+    ageBadgeColor: '#fd7e14',
     coverUrl: 'https://placehold.co/650x350/E09F3E/1D353C?text=Super+Arena+Brawlers',
-    previewGifUrl: 'https://media.giphy.com/media/26tn33aiTi1jkl6H6/giphy.gif',
+    previewUrl: 'https://media.giphy.com/media/26tn33aiTi1jkl6H6/giphy.gif',
     descargaUrl: 'https://cdn.ludustard.com/launchers/SuperArenaSetup_v1.0.exe',
     tipo: 'DESCARGABLE',
     isRecommended: true,
@@ -112,60 +105,65 @@ export const GameCatalog: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
-  // Estado general para colapsar toda la barra lateral izquierda
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
-
-  // Estados para abrir/cerrar tipo persiana las dos gavetas amarillas
   const [isNavDrawerOpen, setIsNavDrawerOpen] = useState<boolean>(true);
   const [isCatDrawerOpen, setIsCatDrawerOpen] = useState<boolean>(true);
 
   const [activeGame, setActiveGame] = useState<Game | null>(null);
   const [currentRecIndex, setCurrentRecIndex] = useState<number>(0);
 
-  // 1. Cargar los juegos desde Spring Boot (GET http://localhost:8080/api/games)
+  // Estado que detiene el carrusel cuando el usuario pone el cursor encima
+  const [isCarouselPaused, setIsCarouselPaused] = useState<boolean>(false);
+
+  // 1. Consumir GET http://localhost:8080/api/games con el nuevo DTO plano
   useEffect(() => {
     const loadGamesFromBackend = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/games`);
-        if (!response.ok) throw new Error('No se pudo obtener /api/games');
+        if (!response.ok) throw new Error('Error al conectar con /api/games');
         const dbGames = await response.json();
 
         if (Array.isArray(dbGames) && dbGames.length > 0) {
-          const normalizedGames: Game[] = dbGames.map((g: Record<string, unknown>, idx: number) => {
-            const catId = Number(g.category_id || g.categoryId || 3);
-            const ageId = Number(g.age_rating_id || g.ageRatingId || 1);
-            const rawCategories = Array.isArray(g.categories)
+          const normalizedGames: Game[] = dbGames.map((g: Record<string, unknown>, idx: number) => ({
+            id: Number(g.id || idx + 1),
+            title: String(g.title || 'Juego Sin Título'),
+            alias: String(g.alias || 'udoware'),
+            description: String(g.description || ''),
+            controls: String(g.instructions || g.controls || 'Teclado y Ratón'),
+            categories: Array.isArray(g.categories)
               ? g.categories.map(String)
-              : [String(g.categoryName || CATEGORY_MAP[catId] || 'Acción y Disparos')];
-
-            return {
-              id: Number(g.id || idx + 1),
-              title: String(g.title || 'Juego Sin Título'),
-              alias: String(g.alias || 'udoware'),
-              description: String(g.description || ''),
-              controls: String(g.instructions || g.controls || 'Teclado y Ratón'),
-              categories: rawCategories,
-              ageRating: String(g.ageRating || AGE_RATING_MAP[ageId] || 'Para todos (+3)'),
-              coverUrl: String(
+              : g.categoryName
+              ? [String(g.categoryName)]
+              : ['Acción y Disparos'],
+            ageRatingName: String(g.ageRatingName || g.ageRating || 'Para todos (+3)'),
+            ageBadgeColor: String(g.ageBadgeColor || '#28a745'),
+            coverUrl: String(
+              g.portadaUrl ||
                 g.portada_url ||
-                  g.portadaUrl ||
-                  g.coverUrl ||
-                  `https://placehold.co/650x350/335C67/FFF3B0?text=${encodeURIComponent(String(g.title || 'Game'))}`
-              ),
-              previewGifUrl: String(
-                g.preview_url ||
-                  g.previewGifUrl ||
-                  'https://media.giphy.com/media/13HgwGsXF0aiGY/giphy.gif'
-              ),
-              gameUrl: g.game_url ? String(g.game_url) : g.gameUrl ? String(g.gameUrl) : '/game-export/index.html',
-              descargaUrl: g.descarga_url ? String(g.descarga_url) : null,
-              tipo: (g.tipo as 'WEB' | 'DESCARGABLE') || 'WEB',
-              isRecommended: Boolean(g.is_featured ?? g.isFeatured ?? true),
-              hasRanked: true,
-              likes: Number(g.likes || 0),
-              dislikes: Number(g.dislikes || 0),
-            };
-          });
+                g.coverUrl ||
+                `https://placehold.co/650x350/335C67/FFF3B0?text=${encodeURIComponent(String(g.title || 'Game'))}`
+            ),
+            previewUrl: g.previewUrl
+              ? String(g.previewUrl)
+              : g.preview_url
+              ? String(g.preview_url)
+              : 'https://media.giphy.com/media/13HgwGsXF0aiGY/giphy.gif',
+            gameUrl: g.gameUrl
+              ? String(g.gameUrl)
+              : g.game_url
+              ? String(g.game_url)
+              : '/game-export/index.html',
+            descargaUrl: g.descargaUrl
+              ? String(g.descargaUrl)
+              : g.descarga_url
+              ? String(g.descarga_url)
+              : null,
+            tipo: (g.tipo as 'WEB' | 'DESCARGABLE') || 'WEB',
+            isRecommended: Boolean(g.isFeatured ?? g.is_featured ?? true),
+            hasRanked: true,
+            likes: Number(g.likes || 0),
+            dislikes: Number(g.dislikes || 0),
+          }));
           setGames(normalizedGames);
         }
       } catch {
@@ -178,16 +176,18 @@ export const GameCatalog: React.FC = () => {
 
   const recommendedGames = games.slice(0, 10);
 
-  // Carrusel automático cada 3 segundos
+  // 2. Carrusel automático que se pausa al poner el cursor encima (isCarouselPaused)
   useEffect(() => {
-    if (activeGame !== null || recommendedGames.length === 0) return;
+    if (activeGame !== null || recommendedGames.length === 0 || isCarouselPaused) {
+      return;
+    }
 
     const interval = window.setInterval(() => {
       setCurrentRecIndex((prev) => (prev + 1) % recommendedGames.length);
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [activeGame, recommendedGames.length]);
+  }, [activeGame, recommendedGames.length, isCarouselPaused]);
 
   const handleNextRecommended = () => {
     setCurrentRecIndex((prev) => (prev + 1) % recommendedGames.length);
@@ -213,6 +213,11 @@ export const GameCatalog: React.FC = () => {
     setSelectedCategories([]);
     setSearchQuery('');
   };
+
+  // Combina las categorías por defecto con cualquier categoría nueva que venga de la BD
+  const allAvailableCategories = Array.from(
+    new Set([...DEFAULT_CATEGORIES, ...games.flatMap((g) => g.categories)])
+  );
 
   const filteredGames = games.filter((game) => {
     const matchesSearch = game.title.toLowerCase().includes(searchQuery.toLowerCase());
@@ -259,7 +264,6 @@ export const GameCatalog: React.FC = () => {
       <div className="main-body">
         <div className="sidebar-wrapper">
           <aside className={`left-sidebar ${!isSidebarOpen ? 'collapsed' : ''}`}>
-            {/* GAVETA 1: NAVEGACIÓN (Se abre/cierra tipo persiana) */}
             <div className="drawer-section">
               <button
                 className="drawer-header-btn"
@@ -290,7 +294,6 @@ export const GameCatalog: React.FC = () => {
               </div>
             </div>
 
-            {/* GAVETA 2: CATEGORÍAS (Se abre/cierra tipo persiana) */}
             <div className="drawer-section">
               <button
                 className="drawer-header-btn"
@@ -301,7 +304,7 @@ export const GameCatalog: React.FC = () => {
               </button>
 
               <div className={`drawer-persiana-body ${!isCatDrawerOpen ? 'closed' : ''}`}>
-                {ALL_CATEGORIES.map((category) => {
+                {allAvailableCategories.map((category) => {
                   const isSelected = selectedCategories.includes(category);
                   return (
                     <button
@@ -339,7 +342,12 @@ export const GameCatalog: React.FC = () => {
                 <section className="recomendados-section">
                   <h2 className="section-header">Recomendados</h2>
 
-                  <div className="carousel-container">
+                  {/* Se pausa el carrusel al entrar con el mouse y se reanuda al salir */}
+                  <div
+                    className="carousel-container"
+                    onMouseEnter={() => setIsCarouselPaused(true)}
+                    onMouseLeave={() => setIsCarouselPaused(false)}
+                  >
                     <button
                       className="carousel-arrow-btn"
                       onClick={handlePrevRecommended}
@@ -348,7 +356,6 @@ export const GameCatalog: React.FC = () => {
                       ◀
                     </button>
 
-                    {/* Ventana con animación de desplazamiento horizontal */}
                     <div className="carousel-viewport">
                       <div
                         className="carousel-track"
@@ -439,7 +446,6 @@ export const GameCatalog: React.FC = () => {
         </main>
       </div>
 
-      {/* BURBUJA FLOTANTE DE CHAT ARRASTRABLE */}
       <FloatingChatBubble />
     </div>
   );
