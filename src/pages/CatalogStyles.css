@@ -1,17 +1,28 @@
 /* =========================================================
-   NUEVA PALETA DE COLORES RETRO Y ESTILO CON RELIEVE (FRIV)
+   PALETA DE COLORES RETRO Y VARIABLES GLOBALES
    ========================================================= */
 :root {
-  --color-amarillo: #E09F3E;     /* Hunyadi yellow */
+  --color-amarillo: #E09F3E;     /* Hunyadi yellow - Gavetas y acentos */
+  --color-amarillo-oscuro: #b87b22;
   --color-rojo-auburn: #9E2A2B;  /* Auburn */
   --color-azul-pizarra: #335C67; /* Dark slate gray */
   --color-vainilla: #FFF3B0;     /* Vanilla */
-  --color-fondo-profundo: #1D353C; /* Derivado oscuro para contraste */
-  
-  /* Sombras y relieves suaves tipo Friv */
+  --color-fondo-profundo: #1D353C;
+
   --relieve-tarjeta: 0 6px 0 rgba(15, 30, 35, 0.7), 0 8px 16px rgba(0, 0, 0, 0.35), inset 0 2px 2px rgba(255, 255, 255, 0.25);
   --relieve-boton: 0 4px 0 rgba(0, 0, 0, 0.45), inset 0 2px 2px rgba(255, 255, 255, 0.35);
   --relieve-hundido: inset 0 3px 6px rgba(0, 0, 0, 0.5);
+}
+
+/* CORRECCIÓN DEL PROBLEMA 4:3 (Fuerza 100% pantalla completa responsiva) */
+html, body, #root {
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: block !important;
+  overflow-x: hidden;
 }
 
 * {
@@ -24,30 +35,32 @@
 .catalog-layout {
   display: flex;
   flex-direction: column;
+  width: 100%;
   min-height: 100vh;
   background: radial-gradient(circle at top, var(--color-azul-pizarra), var(--color-fondo-profundo));
   color: var(--color-vainilla);
 }
 
 /* =========================================================
-   BARRA SUPERIOR FIJA (SOLUCIÓN AL PROBLEMA DE SCROLL)
+   BARRA SUPERIOR FIJA (STICKY)
    ========================================================= */
 .top-navbar {
-  position: sticky; /* Hace que nunca desaparezca al bajar */
+  position: sticky;
   top: 0;
-  z-index: 1000;    /* Siempre por encima de las tarjetas */
+  z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 28px;
+  padding: 12px 32px;
   height: 72px;
+  width: 100%;
   background: linear-gradient(180deg, #3f707d 0%, var(--color-azul-pizarra) 100%);
   border-bottom: 3px solid var(--color-vainilla);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
 }
 
 .logo-box {
-  font-size: 1.6rem;
+  font-size: 1.65rem;
   font-weight: 800;
   color: var(--color-vainilla);
   cursor: pointer;
@@ -63,7 +76,7 @@
   border-radius: 30px;
   padding: 8px 18px;
   width: 45%;
-  max-width: 520px;
+  max-width: 560px;
   box-shadow: var(--relieve-hundido);
 }
 
@@ -93,19 +106,15 @@
   justify-content: center;
   font-size: 1.3rem;
   box-shadow: var(--relieve-boton);
-  transition: transform 0.15s ease;
-}
-
-.profile-btn:hover {
-  transform: translateY(-2px);
 }
 
 /* =========================================================
-   BARRA LATERAL CON BOTÓN TIPO "FICHA" PARA OCULTAR/MOSTRAR
+   BARRA LATERAL CON GAVETAS AMARILLAS (EFECTO CAJÓN)
    ========================================================= */
 .main-body {
   display: flex;
   flex: 1;
+  width: 100%;
   position: relative;
 }
 
@@ -119,25 +128,27 @@
 }
 
 .left-sidebar {
-  width: 245px;
+  width: 265px;
   height: 100%;
   background: linear-gradient(180deg, var(--color-azul-pizarra) 0%, var(--color-fondo-profundo) 100%);
   border-right: 3px solid var(--color-vainilla);
   display: flex;
   flex-direction: column;
-  transition: width 0.3s ease, opacity 0.25s ease;
-  overflow: hidden;
+  padding: 14px 12px;
+  gap: 16px;
+  transition: width 0.3s ease, padding 0.3s ease, opacity 0.25s ease;
+  overflow-y: auto;
+  overflow-x: hidden;
   box-shadow: 4px 0 15px rgba(0, 0, 0, 0.35);
 }
 
-/* Estado cuando la barra está oculta */
 .left-sidebar.collapsed {
   width: 0px;
+  padding: 14px 0px;
   border-right: none;
   opacity: 0;
 }
 
-/* Botón tipo ficha que sobresale en la parte superior */
 .sidebar-ficha-btn {
   margin-top: 14px;
   width: 36px;
@@ -154,60 +165,85 @@
   align-items: center;
   justify-content: center;
   box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.45);
-  transition: transform 0.15s ease, background 0.2s ease;
 }
 
-.sidebar-ficha-btn:hover {
-  background: var(--color-rojo-auburn);
+/* Contenedor de cada sección (Navegación / Categorías) */
+.drawer-section {
+  display: flex;
+  flex-direction: column;
+  min-width: 235px;
+}
+
+/* Cabecera que actúa como la tapa superior del cajón */
+.drawer-header-btn {
+  position: relative;
+  z-index: 3; /* Queda por encima de la gaveta amarilla para dar profundidad */
+  width: 100%;
+  background: linear-gradient(180deg, #3f707d, #23424a);
   color: var(--color-vainilla);
-}
-
-.sidebar-top-groups {
-  padding: 16px;
-  border-bottom: 3px solid var(--color-vainilla);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 240px;
-}
-
-.sidebar-bottom-categories {
-  padding: 16px;
-  flex: 1;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 240px;
-}
-
-.sidebar-title {
+  border: 2px solid var(--color-vainilla);
+  border-radius: 10px;
+  padding: 10px 14px;
   font-size: 1.1rem;
-  font-weight: bold;
-  margin-bottom: 6px;
-  color: var(--color-vainilla);
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
-  border-bottom: 2px solid rgba(255, 243, 176, 0.3);
-  padding-bottom: 4px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.6), inset 0 2px 2px rgba(255, 255, 255, 0.25);
+  transition: background 0.2s ease;
+}
+
+.drawer-header-btn:hover {
+  background: linear-gradient(180deg, #4b8494, #2b505a);
+}
+
+/* Gaveta amarilla con profundidad interna que sale por detrás del título */
+.drawer-persiana-body {
+  position: relative;
+  z-index: 1;
+  margin: -6px 4px 0 4px; /* Nace desde atrás del bloque del título */
+  background: linear-gradient(180deg, #c48324 0%, var(--color-amarillo) 18%, #d18f2e 100%);
+  border: 3px solid var(--color-vainilla);
+  border-top: none;
+  border-radius: 0 0 14px 14px;
+  /* Sombra interna fuerte arriba para simular que sale de adentro de una gaveta */
+  box-shadow: inset 0 10px 14px -4px rgba(0, 0, 0, 0.75), inset 0 0 8px rgba(0, 0, 0, 0.4), 0 6px 12px rgba(0, 0, 0, 0.45);
+  padding: 16px 10px 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 420px;
+  overflow-y: auto;
+  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease, opacity 0.25s ease;
+}
+
+/* Efecto persiana cerrada */
+.drawer-persiana-body.closed {
+  max-height: 0px;
+  padding-top: 0px;
+  padding-bottom: 0px;
+  border-bottom-width: 0px;
+  opacity: 0;
+  overflow: hidden;
 }
 
 .nav-item-btn, .category-btn {
   text-align: left;
   background: linear-gradient(180deg, #274851, var(--color-fondo-profundo));
   color: var(--color-vainilla);
-  border: 2px solid rgba(255, 243, 176, 0.4);
+  border: 2px solid var(--color-vainilla);
   padding: 9px 12px;
   border-radius: 10px;
   cursor: pointer;
-  font-size: 0.95rem;
-  box-shadow: var(--relieve-boton);
-  transition: all 0.15s ease;
+  font-size: 0.92rem;
+  font-weight: 600;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.55);
+  transition: transform 0.15s ease, background 0.15s ease;
 }
 
 .nav-item-btn:hover, .category-btn:hover {
-  background: linear-gradient(180deg, var(--color-amarillo), #c78424);
-  color: var(--color-fondo-profundo);
-  font-weight: bold;
+  background: linear-gradient(180deg, #3c6e7c, #25464f);
   transform: translateY(-2px);
 }
 
@@ -219,36 +255,60 @@
 }
 
 /* =========================================================
-   CONTENIDO PRINCIPAL Y CARRUSEL DE RECOMENDADOS (STEAM)
+   CONTENIDO PRINCIPAL RESPONSIVO Y CARRUSEL DESLIZANTE
    ========================================================= */
 .catalog-content {
   flex: 1;
-  padding: 24px 36px;
+  width: 100%;
+  padding: 28px 40px;
   overflow-x: hidden;
-  position: relative;
 }
 
 .section-header {
   font-size: 1.8rem;
   font-weight: 800;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
   color: var(--color-vainilla);
   text-shadow: 2px 3px 0px rgba(0, 0, 0, 0.5);
+  text-align: center;
 }
 
 .recomendados-section {
   border-bottom: 2px solid rgba(255, 243, 176, 0.3);
   padding-bottom: 28px;
-  margin-bottom: 28px;
+  margin-bottom: 32px;
 }
 
 .carousel-container {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 18px;
-  max-width: 820px;
+  gap: 20px;
+  width: 100%;
+  max-width: 960px;
   margin: 0 auto;
+}
+
+/* Ventana que recorta el carrusel para animar el deslizamiento */
+.carousel-viewport {
+  flex: 1;
+  width: 100%;
+  max-width: 760px;
+  overflow: hidden;
+  border-radius: 18px;
+  padding: 6px 0 12px 0;
+}
+
+/* Pista horizontal con animación de desplazamiento suave */
+.carousel-track {
+  display: flex;
+  width: 100%;
+  transition: transform 0.55s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.carousel-slide {
+  min-width: 100%;
+  padding: 0 6px;
 }
 
 .carousel-arrow-btn {
@@ -262,19 +322,7 @@
   font-weight: bold;
   cursor: pointer;
   box-shadow: var(--relieve-boton);
-  transition: transform 0.15s ease;
   flex-shrink: 0;
-}
-
-.carousel-arrow-btn:hover {
-  background: var(--color-rojo-auburn);
-  color: var(--color-vainilla);
-  transform: scale(1.08);
-}
-
-.carousel-main-frame {
-  flex: 1;
-  max-width: 660px;
 }
 
 .carousel-indicators {
@@ -282,7 +330,7 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  margin-top: 16px;
+  margin-top: 12px;
 }
 
 .carousel-dots {
@@ -303,23 +351,16 @@
 .carousel-dot.active {
   background-color: var(--color-amarillo);
   transform: scale(1.25);
-  box-shadow: 0 0 8px var(--color-amarillo);
-}
-
-.carousel-counter-text {
-  font-size: 0.9rem;
-  font-weight: bold;
-  color: var(--color-vainilla);
-  opacity: 0.9;
 }
 
 /* =========================================================
-   CUADRÍCULA DE JUEGOS Y TARJETAS CON RELIEVE (FRIV)
+   CUADRÍCULA DE JUEGOS Y PREVIEW ANIMADA (ESTILO STEAM)
    ========================================================= */
 .games-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 26px;
+  width: 100%;
 }
 
 .game-card-wrapper {
@@ -329,24 +370,23 @@
 .game-card {
   background: linear-gradient(180deg, var(--color-azul-pizarra), var(--color-fondo-profundo));
   border: 3px solid var(--color-vainilla);
-  border-radius: 16px; /* Bordes redondeados suaves estilo Friv */
+  border-radius: 16px;
   overflow: hidden;
   cursor: pointer;
   box-shadow: var(--relieve-tarjeta);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: transform 0.2s ease, border-color 0.2s ease;
 }
 
 .game-card:hover {
-  transform: translateY(-5px) scale(1.02);
+  transform: translateY(-4px);
   border-color: var(--color-amarillo);
-  box-shadow: 0 10px 0 rgba(15, 30, 35, 0.8), 0 14px 24px rgba(0, 0, 0, 0.5);
 }
 
 .game-card-title-bar {
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.65));
   padding: 8px 12px;
   font-weight: bold;
-  font-size: 0.95rem;
+  font-size: 0.98rem;
   border-bottom: 2px solid var(--color-vainilla);
   white-space: nowrap;
   overflow: hidden;
@@ -354,90 +394,132 @@
   text-align: center;
 }
 
+.cover-media-container {
+  position: relative;
+  width: 100%;
+  height: 170px;
+  background-color: #102026;
+  overflow: hidden;
+}
+
+.game-card.featured .cover-media-container {
+  height: 320px;
+}
+
 .game-card-cover {
   width: 100%;
-  height: 155px;
+  height: 100%;
   object-fit: cover;
   display: block;
+  transition: transform 0.35s ease;
 }
 
-.game-card.featured .game-card-cover {
-  height: 290px;
+.game-card:hover .game-card-cover {
+  transform: scale(1.04);
 }
 
-.game-card.featured .game-card-title-bar {
-  font-size: 1.25rem;
-  padding: 10px 16px;
+.preview-gif-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(158, 42, 43, 0.92);
+  color: var(--color-vainilla);
+  border: 1.5px solid var(--color-vainilla);
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
 }
 
-/* Recuadro emergente (1.5s) */
+/* Popup lateral estilo Steam al mantener 1.5s */
 .hover-details-popup {
   position: absolute;
-  top: -10px;
-  left: 60%;
-  width: 270px;
-  background: linear-gradient(180deg, var(--color-fondo-profundo), #122227);
-  border: 3px solid var(--color-amarillo);
-  border-radius: 16px;
+  top: 0;
+  left: calc(100% + 12px);
+  width: 300px;
+  background: linear-gradient(180deg, #1b2838, #101822);
+  border: 2px solid var(--color-amarillo);
+  border-radius: 12px;
   padding: 16px;
-  z-index: 500;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.8);
+  z-index: 600;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.85);
   cursor: default;
+}
+
+/* Si la tarjeta está muy a la derecha de la pantalla, abre a la izquierda */
+.game-card-wrapper:nth-child(4n) .hover-details-popup,
+.game-card-wrapper:last-child .hover-details-popup {
+  left: auto;
+  right: calc(100% + 12px);
 }
 
 .popup-title {
   font-size: 1.15rem;
-  font-weight: bold;
-  color: var(--color-amarillo);
-  margin-bottom: 8px;
-  border-bottom: 1px solid rgba(255, 243, 176, 0.3);
-  padding-bottom: 4px;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 4px;
+}
+
+.popup-subdate {
+  font-size: 0.75rem;
+  color: #96a7b8;
+  margin-bottom: 10px;
+  text-transform: uppercase;
 }
 
 .popup-text {
-  font-size: 0.88rem;
-  margin-bottom: 8px;
-  line-height: 1.35;
+  font-size: 0.86rem;
+  color: #d6e0ea;
+  margin-bottom: 10px;
+  line-height: 1.38;
 }
 
-.popup-play-btn {
-  width: 100%;
-  margin-top: 8px;
-  padding: 9px 14px;
-  background: linear-gradient(180deg, #b83234, var(--color-rojo-auburn));
+.popup-reviews-box {
+  background: rgba(0, 0, 0, 0.38);
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  margin-bottom: 10px;
+}
+
+.popup-tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.steam-tag-pill {
+  background: rgba(255, 255, 255, 0.14);
   color: var(--color-vainilla);
-  border: 2px solid var(--color-vainilla);
-  border-radius: 20px;
-  font-weight: bold;
-  cursor: pointer;
-  box-shadow: var(--relieve-boton);
-}
-
-.popup-play-btn:hover {
-  background: linear-gradient(180deg, var(--color-amarillo), #c78424);
-  color: var(--color-fondo-profundo);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.74rem;
+  font-weight: 600;
 }
 
 /* =========================================================
-   PESTAÑA DE JUEGO (BOCETO PESTAÑA DE JUEGO.JPEG)
+   GAMEVIEWER RESPONSIVO (PANTALLA COMPLETA)
    ========================================================= */
 .player-view-wrapper {
   position: relative;
-  min-height: calc(100vh - 120px);
+  width: 100%;
+  min-height: calc(100vh - 125px);
   border-radius: 20px;
   overflow: hidden;
-  padding: 28px;
+  padding: 28px 34px;
   border: 3px solid rgba(255, 243, 176, 0.35);
   box-shadow: var(--relieve-tarjeta);
 }
 
-/* Fondo con la portada del juego difuminada */
 .player-blurred-bg {
   position: absolute;
   inset: 0;
   background-size: cover;
   background-position: center;
-  filter: blur(24px) brightness(0.42);
+  filter: blur(26px) brightness(0.38);
   transform: scale(1.12);
   z-index: 0;
 }
@@ -448,12 +530,15 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+  width: 100%;
 }
 
 .player-header-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .player-game-title {
@@ -467,28 +552,22 @@
   background: linear-gradient(180deg, var(--color-azul-pizarra), var(--color-fondo-profundo));
   color: var(--color-vainilla);
   border: 2px solid var(--color-vainilla);
-  padding: 8px 16px;
+  padding: 8px 18px;
   border-radius: 12px;
   font-weight: bold;
   cursor: pointer;
   box-shadow: var(--relieve-boton);
 }
 
-.back-catalog-btn:hover {
-  background: var(--color-amarillo);
-  color: var(--color-fondo-profundo);
-}
-
-/* Fila superior: Ventana del juego + Tabla Ranked */
 .player-main-stage {
   display: flex;
   gap: 24px;
   align-items: stretch;
-  flex-wrap: wrap;
+  width: 100%;
 }
 
 .game-screen-column {
-  flex: 3;
+  flex: 3.5;
   min-width: 320px;
   display: flex;
   flex-direction: column;
@@ -497,16 +576,15 @@
 
 .game-window-frame {
   width: 100%;
-  height: 430px;
+  aspect-ratio: 16 / 9;
+  min-height: 440px;
+  max-height: 680px;
   background-color: #0d191d;
   border: 4px solid var(--color-vainilla);
   border-radius: 16px;
   overflow: hidden;
   position: relative;
   box-shadow: var(--relieve-tarjeta);
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .game-preview-overlay {
@@ -519,24 +597,17 @@
   align-items: center;
   justify-content: center;
   background-blend-mode: darken;
-  background-color: rgba(0, 0, 0, 0.45);
+  background-color: rgba(0, 0, 0, 0.5);
   gap: 14px;
 }
 
-.game-iframe-active {
-  width: 100%;
-  height: 100%;
-  border: none;
-}
-
-/* Tabla Ranked (1 al 10) a la derecha */
 .ranked-sidebar-box {
-  flex: 1;
-  min-width: 240px;
-  background: rgba(29, 53, 60, 0.88);
+  flex: 1.2;
+  min-width: 260px;
+  background: rgba(29, 53, 60, 0.9);
   border: 3px solid var(--color-vainilla);
   border-radius: 16px;
-  padding: 16px;
+  padding: 18px;
   box-shadow: var(--relieve-tarjeta);
   display: flex;
   flex-direction: column;
@@ -562,14 +633,13 @@
 .ranked-item {
   display: flex;
   justify-content: space-between;
-  background: rgba(0, 0, 0, 0.35);
-  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.38);
+  padding: 8px 12px;
   border-radius: 8px;
   font-size: 0.92rem;
   border: 1px solid rgba(255, 243, 176, 0.2);
 }
 
-/* Barra de botones debajo de la ventana del juego */
 .player-action-bar {
   display: flex;
   align-items: center;
@@ -577,7 +647,7 @@
   background: rgba(29, 53, 60, 0.92);
   border: 3px solid var(--color-vainilla);
   border-radius: 14px;
-  padding: 12px 18px;
+  padding: 12px 20px;
   flex-wrap: wrap;
   gap: 14px;
   box-shadow: var(--relieve-tarjeta);
@@ -592,14 +662,6 @@
   font-weight: bold;
   cursor: pointer;
   box-shadow: var(--relieve-boton);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.action-btn:hover:not(:disabled) {
-  background: var(--color-amarillo);
-  color: var(--color-fondo-profundo);
 }
 
 .action-btn.saved {
@@ -613,17 +675,11 @@
   padding: 10px 26px;
 }
 
-.action-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Bloque de Likes / Dislikes + Barra de porcentaje */
 .votes-widget {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  min-width: 155px;
+  min-width: 170px;
 }
 
 .votes-buttons-row {
@@ -671,7 +727,6 @@
 .likes-percent-label {
   font-size: 0.75rem;
   text-align: center;
-  color: var(--color-vainilla);
 }
 
 .right-icon-group {
@@ -679,7 +734,6 @@
   gap: 10px;
 }
 
-/* Recuadro inferior: Descripción y Cómo Jugar */
 .description-controls-box {
   background: rgba(29, 53, 60, 0.9);
   border: 3px solid var(--color-vainilla);
@@ -688,7 +742,7 @@
   box-shadow: var(--relieve-tarjeta);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .desc-box-title {
@@ -697,4 +751,149 @@
   color: var(--color-amarillo);
   border-bottom: 2px solid rgba(255, 243, 176, 0.3);
   padding-bottom: 6px;
+}
+
+/* =========================================================
+   BURBUJA FLOTANTE DE CHAT ARRASTRABLE Y VENTANA DE CHAT
+   ========================================================= */
+.floating-chat-wrapper {
+  position: fixed;
+  z-index: 9999;
+  user-select: none;
+}
+
+.chat-bubble-trigger {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, var(--color-amarillo), #c77b16);
+  border: 3px solid var(--color-vainilla);
+  color: var(--color-fondo-profundo);
+  font-size: 1.7rem;
+  font-weight: 900;
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.65), inset 0 2px 3px rgba(255, 255, 255, 0.45);
+  position: relative;
+  transition: transform 0.15s ease;
+}
+
+.chat-bubble-trigger:active {
+  cursor: grabbing;
+  transform: scale(0.95);
+}
+
+/* Insignia azul de mensaje igual al ejemplo chat 1 */
+.chat-bubble-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background-color: #0d6efd;
+  border: 2px solid #ffffff;
+  color: #ffffff;
+  font-size: 0.78rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Ventana de Chat Global estilo Roblox (ejemplo chat 2) */
+.chat-global-window {
+  width: 350px;
+  height: 410px;
+  background: rgba(16, 28, 34, 0.94);
+  backdrop-filter: blur(10px);
+  border: 2px solid var(--color-vainilla);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.8);
+  margin-bottom: 12px;
+}
+
+.chat-window-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(0, 0, 0, 0.55);
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255, 243, 176, 0.2);
+}
+
+.chat-channel-tabs {
+  display: flex;
+  background: rgba(0, 0, 0, 0.45);
+  border-bottom: 2px solid rgba(255, 243, 176, 0.2);
+}
+
+.chat-tab-btn {
+  flex: 1;
+  background: transparent;
+  color: rgba(255, 243, 176, 0.65);
+  border: none;
+  border-right: 1px solid rgba(255, 243, 176, 0.15);
+  padding: 8px 4px;
+  font-size: 0.85rem;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.chat-tab-btn.active {
+  color: var(--color-amarillo);
+  background: rgba(224, 159, 62, 0.15);
+  border-bottom: 2px solid var(--color-amarillo);
+}
+
+.chat-messages-area {
+  flex: 1;
+  padding: 12px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.88rem;
+}
+
+.chat-msg-row {
+  line-height: 1.35;
+}
+
+.chat-input-row {
+  display: flex;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  border-top: 1px solid rgba(255, 243, 176, 0.25);
+  gap: 6px;
+}
+
+.chat-input-box {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 243, 176, 0.35);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: var(--color-vainilla);
+  outline: none;
+}
+
+.chat-send-btn {
+  background: var(--color-amarillo);
+  color: var(--color-fondo-profundo);
+  border: none;
+  border-radius: 6px;
+  padding: 0 12px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+@media (max-width: 980px) {
+  .player-main-stage {
+    flex-direction: column;
+  }
 }
