@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-// REEMPLAZA ESTAS DOS RUTAS POR TUS ARCHIVOS PNG EN public/assets/
-const TURTLE_WALK_PNG = 'https://placehold.co/64x44/2ec4b6/161024?text=Morrocoya+PNG';
-const TURTLE_SHELL_PNG = 'https://placehold.co/56x40/e5a93c/161024?text=Caparazon+PNG';
+const TURTLE_WALK_PNG = '/morrocoya-walk.png';
+const TURTLE_SHELL_PNG = '/morrocoya-shell.png';
 
 type TurtleState = 'WALKING' | 'IN_SHELL' | 'WOBBLING';
 
