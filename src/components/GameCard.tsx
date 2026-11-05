@@ -1,145 +1,104 @@
-import React, { useState, useRef } from 'react';
-
-export interface ScoreEntry {
-  player: string;
-  score: number;
-}
-
-export interface Game {
-  id: number;
-  title: string;
-  alias: string;
-  description: string;
-  controls: string;
-  categories: string[];
-  ageRatingName: string;
-  ageBadgeColor: string;
-  coverUrl: string;
-  previewUrl?: string | null;
-  gameUrl?: string | null;
-  descargaUrl?: string | null;
-  tipo?: 'WEB' | 'DESCARGABLE';
-  isRecommended?: boolean;
-  hasRanked?: boolean;
-  likes: number;
-  dislikes: number;
-}
+import React, { useState } from 'react';
+import { type Game } from '../data/gamesData';
 
 interface GameCardProps {
   game: Game;
-  size?: 'normal' | 'featured';
-  onPlayClick: (game: Game) => void;
+  isSelected?: boolean;
+  onClick: () => void;
+  onDoubleClick?: () => void;
+  imageHeight?: number;
 }
 
-export const GameCard: React.FC<GameCardProps> = ({ game, size = 'normal', onPlayClick }) => {
+export const GameCard: React.FC<GameCardProps> = ({
+  game,
+  isSelected = false,
+  onClick,
+  onDoubleClick,
+  imageHeight = 132,
+}) => {
   const [isHovered, setIsHovered] = useState<boolean>(false);
-  const [showPopup, setShowPopup] = useState<boolean>(false);
-  const [popupCoords, setPopupCoords] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
 
-  const timerRef = useRef<number | null>(null);
-  const cardWrapperRef = useRef<HTMLDivElement | null>(null);
-
-  // Calcula dónde colocar el hover para que jamás se salga por la derecha ni por abajo
-  const calculatePopupPosition = () => {
-    if (!cardWrapperRef.current) return;
-    const rect = cardWrapperRef.current.getBoundingClientRect();
-    const popupWidth = 285;
-    const popupEstimatedHeight = 250;
-    const margin = 12;
-
-    // 1. Posición Horizontal: a la derecha por defecto; si no cabe, sale por la izquierda
-    let left = rect.right + margin;
-    if (left + popupWidth > window.innerWidth - margin) {
-      left = rect.left - popupWidth - margin;
-    }
-    // Si la tarjeta es muy ancha (como en el carrusel) y tampoco cabe a la izquierda, lo alinea adentro a la derecha
-    if (left < margin) {
-      left = Math.max(margin, window.innerWidth - popupWidth - margin);
-    }
-
-    // 2. Posición Vertical: alineado arriba de la tarjeta; si se corta abajo, sube automáticamente
-    let top = rect.top;
-    if (top + popupEstimatedHeight > window.innerHeight - margin) {
-      top = Math.max(80, window.innerHeight - popupEstimatedHeight - margin);
-    }
-
-    setPopupCoords({ top, left });
-  };
-
-  const handleMouseEnter = () => {
-    setIsHovered(true);
-    timerRef.current = window.setTimeout(() => {
-      calculatePopupPosition();
-      setShowPopup(true);
-    }, 1500); // 1.5 segundos exactos
-  };
-
-  const handleMouseLeave = () => {
-    setIsHovered(false);
-    if (timerRef.current !== null) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    setShowPopup(false);
-  };
+  const totalVotes = game.likes + game.dislikes;
+  const ratingPercent =
+    totalVotes > 0 ? Math.round((game.likes / totalVotes) * 100) : 95;
 
   return (
     <div
-      ref={cardWrapperRef}
-      className="game-card-wrapper"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onClick={onClick}
+      onDoubleClick={onDoubleClick}
+      style={{
+        background: 'var(--panel-card-bg)',
+        border:
+          isSelected || isHovered
+            ? '2.5px solid var(--primary-border)'
+            : '2px solid var(--panel-border-outer)',
+        borderRadius: '16px',
+        overflow: 'hidden',
+        cursor: 'pointer',
+        boxShadow: 'var(--bevel-btn-secondary)',
+        transform: isHovered ? 'translateY(-4px) scale(1.02)' : 'none',
+        transition: 'transform 0.25s var(--ease-squish), border-color 0.2s ease',
+      }}
     >
-      <div
-        className={`game-card ${size === 'featured' ? 'featured' : ''}`}
-        onClick={() => onPlayClick(game)}
-      >
-        <div className="game-card-title-bar">{game.title}</div>
-        <div className="cover-media-container">
-          <img
-            src={isHovered && game.previewUrl ? game.previewUrl : game.coverUrl}
-            alt={game.title}
-            className="game-card-cover"
-          />
-        </div>
-      </div>
+      <div style={{ position: 'relative', height: `${imageHeight}px`, overflow: 'hidden' }}>
+        <img
+          src={isHovered && game.previewGifUrl ? game.previewGifUrl : game.coverUrl}
+          alt={game.title}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        />
 
-      {/* Recuadro con el estilo suave de la página general y posición calculada */}
-      {showPopup && (
-        <div
-          className="hover-details-popup"
-          style={{
-            top: `${popupCoords.top}px`,
-            left: `${popupCoords.left}px`,
-          }}
-        >
-          <div className="popup-title">{game.title}</div>
-          <p className="popup-text">
-            <strong>Descripción:</strong> {game.description}
-          </p>
-          <p className="popup-text">
-            <strong>Categorías:</strong> {game.categories.join(', ')}
-          </p>
-          <p className="popup-text">
-            <strong>Edad recomendada:</strong>
-            <span
-              className="age-rating-badge"
-              style={{ backgroundColor: game.ageBadgeColor || '#28a745' }}
-            >
-              {game.ageRatingName}
-            </span>
-          </p>
-          <button
-            className="popup-play-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              onPlayClick(game);
+        {isHovered && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background:
+                'linear-gradient(180deg, rgba(16,12,28,0.2) 0%, rgba(16,12,28,0.94) 100%)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'flex-end',
+              padding: '10px',
+              gap: '3px',
             }}
           >
-            Jugar ahora
-          </button>
-        </div>
-      )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span
+                style={{
+                  background: 'var(--primary-mid)',
+                  color: '#ffffff',
+                  fontSize: '0.66rem',
+                  fontWeight: 800,
+                  padding: '2px 7px',
+                  borderRadius: '5px',
+                }}
+              >
+                {game.tipo}
+              </span>
+              <span style={{ color: '#ffd166', fontSize: '0.75rem', fontWeight: 800 }}>
+                {ratingPercent}% Positivo
+              </span>
+            </div>
+            <div style={{ fontSize: '0.7rem', color: '#f1f5f9' }}>{game.ageRating}</div>
+          </div>
+        )}
+      </div>
+
+      <div
+        style={{
+          padding: '10px 12px',
+          fontWeight: 800,
+          fontSize: '0.88rem',
+          color: 'var(--text-main)',
+          textAlign: 'center',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+        }}
+      >
+        {game.title}
+      </div>
     </div>
   );
 };
