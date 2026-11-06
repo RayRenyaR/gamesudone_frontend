@@ -1,41 +1,3 @@
-export interface ScoreEntry {
-  player: string;
-  score: number;
-  gameTitle?: string;
-}
-
-export interface Game {
-  id: number;
-  title: string;
-  alias: string;
-  description: string;
-  controls: string;
-  categories: string[];
-  ageRating: string;
-  ageBadgeColor?: string;
-  coverUrl: string;
-  previewGifUrl?: string;
-  gameUrl?: string | null;
-  descargaUrl?: string | null;
-  tipo: 'WEB' | 'FLASH' | 'DESCARGABLE';
-  isRecommended?: boolean;
-  hasRanked?: boolean;
-  likes: number;
-  dislikes: number;
-  developer?: string;
-  releaseDate?: string;
-}
-
-export const API_BASE_URL = 'http://localhost:8080/api';
-
-export const DEFAULT_LEADERBOARD: ScoreEntry[] = [
-  { player: 'Rayner_UDO', score: 9850, gameTitle: 'UDOWare' },
-  { player: 'Gabriel_UI', score: 9420, gameTitle: 'UDOWare' },
-  { player: 'Nicolas_Lider', score: 8900, gameTitle: 'Chess College' },
-  { player: 'Osmer_Backend', score: 8450, gameTitle: 'WarioWare UDO' },
-  { player: 'Ruben_Dev', score: 8150, gameTitle: 'UDOWare' },
-];
-
 // Catálogo local en caso de que el Backend de Spring Boot esté apagado
 export const FALLBACK_GAMES: Game[] = [
   {
@@ -87,8 +49,8 @@ export const FALLBACK_GAMES: Game[] = [
     categories: ['Acción', 'Peleas', 'Flash'],
     ageRating: 'Adolescentes (+12)',
     ageBadgeColor: '#e5a93c',
-    coverUrl: '/public/assets/covers/electriman_2.jpg',
-    previewGifUrl: '/public/assets/preview/electriman_2_preview .gif',
+    coverUrl: '/assets/covers/electriman_2.jpg',
+    previewGifUrl: '/assets/preview/electriman_2_preview.gif',
     gameUrl: '/games-swf/ElectricMan.swf',
     tipo: 'FLASH',
     isRecommended: false,
@@ -107,8 +69,8 @@ export const FALLBACK_GAMES: Game[] = [
     categories: ['Puzzles', 'Aventura', 'Flash'],
     ageRating: 'Adolescentes (+12)',
     ageBadgeColor: '#d9385a',
-    coverUrl: '/public/assets/covers/fernanfloo_sawgame.jpg',
-    previewGifUrl: '/public/assets/preview/fernanfloo_saw_game_preview.gif',
+    coverUrl: '/assets/covers/fernanfloo_sawgame.jpg',
+    previewGifUrl: '/assets/preview/fernanfloo_saw_game_preview.gif',
     gameUrl: '/games-swf/fernanfloo-saw.swf',
     tipo: 'FLASH',
     isRecommended: false,
@@ -127,8 +89,8 @@ export const FALLBACK_GAMES: Game[] = [
     categories: ['2 Jugadores', 'Puzzles', 'Flash'],
     ageRating: 'Para todos (+3)',
     ageBadgeColor: '#5a189a',
-    coverUrl: '/public/assets/covers/Fireboy_and_Watergirl_2.webp',
-    previewGifUrl: '/public/assets/preview/fireboy_y_waergirl_2.gif',
+    coverUrl: '/assets/covers/Fireboy_and_Watergirl_2.webp',
+    previewGifUrl: '/assets/preview/fireboy_y_waergirl_2.gif',
     gameUrl: '/games-swf/Fireboy and Watergirl in The Light Temple.swf',
     tipo: 'FLASH',
     isRecommended: false,
@@ -147,8 +109,8 @@ export const FALLBACK_GAMES: Game[] = [
     categories: ['2 Jugadores', 'Puzzles', 'Flash'],
     ageRating: 'Para todos (+3)',
     ageBadgeColor: '#5a189a',
-    coverUrl: '/public/assets/covers/fireboy_and_watergirl_1.jpg',
-    previewGifUrl: '/public/assets/preview/fireboy_y_wathergirl_1_preview.gif',
+    coverUrl: '/assets/covers/fireboy_and_watergirl_1.jpg',
+    previewGifUrl: '/assets/preview/fireboy_y_wathergirl_1_preview.gif',
     gameUrl: '/games-swf/Fireboy And Watergirl.swf',
     tipo: 'FLASH',
     isRecommended: true,
@@ -160,15 +122,15 @@ export const FALLBACK_GAMES: Game[] = [
   },
   {
     id: 7,
-    title: 'Garfield\'s Scary Scavenger Hunt',
+    title: "Garfield's Scary Scavenger Hunt",
     alias: 'garfield-scary',
     description: 'Acompaña a Garfield a explorar una mansión embrujada para encontrar donas mientras evitas sustos.',
     controls: 'Flechas para moverse y clic en los objetos del inventario.',
     categories: ['Aventura', 'Puzzles', 'Flash'],
     ageRating: 'Niños (+7)',
     ageBadgeColor: '#2ec4b6',
-    coverUrl: '/public/assets/covers/garfield_scary_scavenger_hunt_portada.webp',
-    previewGifUrl: '/public/assets/preview/garfield_scary_scavenger_hunt_preview.gif',
+    coverUrl: '/assets/covers/garfield_scary_scavenger_hunt_portada.webp',
+    previewGifUrl: '/assets/preview/garfield_scary_scavenger_hunt_preview.gif',
     gameUrl: '/games-swf/Garfield Scary Scavenger Hunt.swf',
     tipo: 'FLASH',
     isRecommended: false,
@@ -187,8 +149,8 @@ export const FALLBACK_GAMES: Game[] = [
     categories: ['Acción', 'Disparos', '2 Jugadores', 'Flash'],
     ageRating: 'Adolescentes (+12)',
     ageBadgeColor: '#d9385a',
-    coverUrl: '/public/assets/covers/gun_mayhem_2.png',
-    previewGifUrl: '/public/assets/preview/gun_mayhen_2_preview.gif',
+    coverUrl: '/assets/covers/gun_mayhem_2.png',
+    previewGifUrl: '/assets/preview/gun_mayhen_2_preview.gif',
     gameUrl: '/games-swf/gun-mayhem-2-more-ma-13824.swf',
     tipo: 'FLASH',
     isRecommended: true,
@@ -200,15 +162,15 @@ export const FALLBACK_GAMES: Game[] = [
   },
   {
     id: 9,
-    title: 'Papa\'s Pizzeria',
+    title: "Papa's Pizzeria",
     alias: 'papas-pizzeria',
     description: 'Toma pedidos, hornea pizzas y córtalas perfectamente para dejar a tus clientes felices.',
     controls: 'Clic izquierdo para interactuar con las estaciones.',
     categories: ['Simulación', 'Arcade', 'Flash'],
     ageRating: 'Para todos (+3)',
     ageBadgeColor: '#e5a93c',
-    coverUrl: '/public/assets/covers/papas_pizzeria.jpg',
-    previewGifUrl: '/public/assets/preview/papas_pizzeria_preview.gif',
+    coverUrl: '/assets/covers/papas_pizzeria.jpg',
+    previewGifUrl: '/assets/preview/papas_pizzeria_preview.gif',
     gameUrl: '/games-swf/Papa´s Pizzeria.swf',
     tipo: 'FLASH',
     isRecommended: true,
@@ -227,8 +189,8 @@ export const FALLBACK_GAMES: Game[] = [
     categories: ['Plataformas', 'Humor', 'Flash'],
     ageRating: 'Niños (+7)',
     ageBadgeColor: '#5a189a',
-    coverUrl: '/public/assets/covers/Syobon_Action_(Cat_Mario).webp',
-    previewGifUrl: '/public/assets/preview/cat_mario_preview.gif',
+    coverUrl: '/assets/covers/Syobon_Action_(Cat_Mario).webp',
+    previewGifUrl: '/assets/preview/cat_mario_preview.gif',
     gameUrl: '/games-swf/Syobon Action.swf',
     tipo: 'FLASH',
     isRecommended: false,
@@ -247,8 +209,8 @@ export const FALLBACK_GAMES: Game[] = [
     categories: ['Acción', 'Disparos', 'Flash'],
     ageRating: 'Adolescentes (+12)',
     ageBadgeColor: '#d9385a',
-    coverUrl: '/public/assets/covers/tequila_zombie_2.jpg',
-    previewGifUrl: '/public/assets/preview/tequila_zombie_2_preview.gif',
+    coverUrl: '/assets/covers/tequila_zombie_2.jpg',
+    previewGifUrl: '/assets/preview/tequila_zombie_2_preview.gif',
     gameUrl: '/games-swf/TequilaZombies2.swf',
     tipo: 'FLASH',
     isRecommended: false,
@@ -267,8 +229,8 @@ export const FALLBACK_GAMES: Game[] = [
     categories: ['Plataformas', 'Arcade', 'Flash'],
     ageRating: 'Para todos (+3)',
     ageBadgeColor: '#5a189a',
-    coverUrl: '/public/assets/covers/Ultimate_Flash_Sonic.webp',
-    previewGifUrl: '/public/assets/preview/ultimate_sonic_flash_preview.gif',
+    coverUrl: '/assets/covers/Ultimate_Flash_Sonic.webp',
+    previewGifUrl: '/assets/preview/ultimate_sonic_flash_preview.gif',
     gameUrl: '/games-swf/ultimateflashsonicwidescreen.swf',
     tipo: 'FLASH',
     isRecommended: true,
@@ -279,47 +241,3 @@ export const FALLBACK_GAMES: Game[] = [
     releaseDate: '2004',
   },
 ];
-
-export async function fetchCatalogGames(): Promise<Game[]> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/games`);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-
-    if (Array.isArray(data) && data.length > 0) {
-      return data.map((g: Record<string, unknown>, idx: number) => {
-        const rawTitle = String(g.title || 'Juego Sin Título');
-        const rawRoute = String(g.gameUrl || g.route || '/game-export/index.html');
-        
-        // Detección automática para Ajedrez y Flash
-        const isChess = rawTitle.toLowerCase().includes('ajedrez') || rawRoute.toLowerCase().includes('ajedrez');
-        const isSwf = rawRoute.toLowerCase().endsWith('.swf');
-
-        return {
-          id: Number(g.id || idx + 1),
-          title: rawTitle,
-          alias: String(g.alias || rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')),
-          description: String(g.description || 'Sin descripción disponible.'),
-          controls: String(g.controls || g.instructions || 'Teclado y Ratón'),
-          categories: Array.isArray(g.categories) ? g.categories.map(String) : [String(g.category || 'Arcade')],
-          ageRating: String(g.ageRatingName || g.ageRating || 'Para todos (+3)'),
-          ageBadgeColor: String(g.ageBadgeColor || '#7b2cbf'),
-          coverUrl: String(g.portadaUrl || g.coverUrl || `https://placehold.co/800x450/240046/ffffff?text=${encodeURIComponent(rawTitle)}`),
-          previewGifUrl: String(g.previewUrl || 'https://media.giphy.com/media/13HgwGsXF0aiGY/giphy.gif'),
-          gameUrl: isChess ? 'https://chesscollege.onrender.com/' : rawRoute,
-          descargaUrl: g.descargaUrl ? String(g.descargaUrl) : null,
-          tipo: isSwf ? 'FLASH' : ((g.tipo as 'WEB' | 'DESCARGABLE') || 'WEB'),
-          isRecommended: Boolean(g.isFeatured ?? true),
-          hasRanked: true,
-          likes: Number(g.likes ?? 120 + idx * 35),
-          dislikes: Number(g.dislikes ?? 8),
-          developer: isChess ? 'Grupo Ajedrez UDO' : String(g.developer || 'Comunidad UDO'),
-          releaseDate: String(g.releaseDate || '2026'),
-        };
-      });
-    }
-  } catch (err) {
-    console.warn('Usando catálogo de respaldo porque el backend no respondió:', err);
-  }
-  return FALLBACK_GAMES;
-}
