@@ -1,3 +1,41 @@
+export interface ScoreEntry {
+  player: string;
+  score: number;
+  gameTitle?: string;
+}
+
+export interface Game {
+  id: number;
+  title: string;
+  alias: string;
+  description: string;
+  controls: string;
+  categories: string[];
+  ageRating: string;
+  ageBadgeColor?: string;
+  coverUrl: string;
+  previewGifUrl?: string;
+  gameUrl?: string | null;
+  descargaUrl?: string | null;
+  tipo: 'WEB' | 'FLASH' | 'DESCARGABLE';
+  isRecommended?: boolean;
+  hasRanked?: boolean;
+  likes: number;
+  dislikes: number;
+  developer?: string;
+  releaseDate?: string;
+}
+
+export const API_BASE_URL = 'http://localhost:8080/api';
+
+export const DEFAULT_LEADERBOARD: ScoreEntry[] = [
+  { player: 'Rayner_UDO', score: 9850, gameTitle: 'UDOWare' },
+  { player: 'Gabriel_UI', score: 9420, gameTitle: 'UDOWare' },
+  { player: 'Nicolas_Lider', score: 8900, gameTitle: 'Chess College' },
+  { player: 'Osmer_Backend', score: 8450, gameTitle: 'WarioWare UDO' },
+  { player: 'Ruben_Dev', score: 8150, gameTitle: 'UDOWare' },
+];
+
 // Catálogo local en caso de que el Backend de Spring Boot esté apagado
 export const FALLBACK_GAMES: Game[] = [
   {
@@ -241,3 +279,47 @@ export const FALLBACK_GAMES: Game[] = [
     releaseDate: '2004',
   },
 ];
+
+export async function fetchCatalogGames(): Promise<Game[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/games`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+
+    if (Array.isArray(data) && data.length > 0) {
+      return data.map((g: Record<string, unknown>, idx: number) => {
+        const rawTitle = String(g.title || 'Juego Sin Título');
+        const rawRoute = String(g.gameUrl || g.route || '/game-export/index.html');
+        
+        // Detección automática para Ajedrez y Flash
+        const isChess = rawTitle.toLowerCase().includes('ajedrez') || rawRoute.toLowerCase().includes('ajedrez');
+        const isSwf = rawRoute.toLowerCase().endsWith('.swf');
+
+        return {
+          id: Number(g.id || idx + 1),
+          title: rawTitle,
+          alias: String(g.alias || rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')),
+          description: String(g.description || 'Sin descripción disponible.'),
+          controls: String(g.controls || g.instructions || 'Teclado y Ratón'),
+          categories: Array.isArray(g.categories) ? g.categories.map(String) : [String(g.category || 'Arcade')],
+          ageRating: String(g.ageRatingName || g.ageRating || 'Para todos (+3)'),
+          ageBadgeColor: String(g.ageBadgeColor || '#7b2cbf'),
+          coverUrl: String(g.portadaUrl || g.coverUrl || `https://placehold.co/800x450/240046/ffffff?text=${encodeURIComponent(rawTitle)}`),
+          previewGifUrl: String(g.previewUrl || 'https://media.giphy.com/media/13HgwGsXF0aiGY/giphy.gif'),
+          gameUrl: isChess ? 'https://chesscollege.onrender.com/' : rawRoute,
+          descargaUrl: g.descargaUrl ? String(g.descargaUrl) : null,
+          tipo: isSwf ? 'FLASH' : ((g.tipo as 'WEB' | 'DESCARGABLE') || 'WEB'),
+          isRecommended: Boolean(g.isFeatured ?? true),
+          hasRanked: true,
+          likes: Number(g.likes ?? 120 + idx * 35),
+          dislikes: Number(g.dislikes ?? 8),
+          developer: isChess ? 'Grupo Ajedrez UDO' : String(g.developer || 'Comunidad UDO'),
+          releaseDate: String(g.releaseDate || '2026'),
+        };
+      });
+    }
+  } catch (err) {
+    console.warn('Usando catálogo de respaldo porque el backend no respondió:', err);
+  }
+  return FALLBACK_GAMES;
+}
