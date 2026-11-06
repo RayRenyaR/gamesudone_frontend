@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { KaikSidebar } from './KaikSideBar';
+import { KaikSidebar } from './KaikSidebar';
 import '../pages/CatalogStyles.css';
 
 export type ThemeId = 'friv2' | 'wii' | 'wii-dark' | 'kizi';
