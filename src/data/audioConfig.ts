@@ -37,10 +37,10 @@ export const PLAYLIST_TRACKS: MusicTrack[] = [
 // Si deseas usar archivos .mp3/.wav propios para la interfaz, coloca la ruta aquí.
 // Si se deja vacío (''), usa el sintetizador retro integrado sin requerir descargas.
 export const CUSTOM_SFX_URLS = {
-  click: '', // ej: '/assets/sfx/click.mp3'
-  hover: '', // ej: '/assets/sfx/hover.mp3'
-  open: '',  // ej: '/assets/sfx/open.mp3'
-  close: '', // ej: '/assets/sfx/close.mp3'
+  click: './assets/sfx/click.wav', // ej: '/assets/sfx/click.mp3'
+  hover: './assets/sfx/hover.wav', // ej: '/assets/sfx/hover.mp3'
+  open: './assets/sfx/open.wav',  // ej: '/assets/sfx/open.mp3'
+  close: './assets/sfx/close.wav', // ej: '/assets/sfx/close.mp3'
 };
 
 class SoundController {
