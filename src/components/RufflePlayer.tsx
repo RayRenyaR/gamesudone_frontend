@@ -1,18 +1,21 @@
-
 import React, { useEffect, useRef } from 'react';
 
 interface RufflePlayerProps {
   swfUrl: string;
 }
 
+type RuffleElement = HTMLElement & {
+  load: (url: string) => void;
+  pause?: () => void;
+  remove: () => void;
+  style: CSSStyleDeclaration;
+};
+
 declare global {
   interface Window {
     RufflePlayer?: {
       newest: () => {
-        createPlayer: () => HTMLElement & {
-          load: (url: string) => void;
-          style: CSSStyleDeclaration;
-        };
+        createPlayer: () => RuffleElement;
       };
     };
   }
@@ -20,18 +23,35 @@ declare global {
 
 export const RufflePlayer: React.FC<RufflePlayerProps> = ({ swfUrl }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const activePlayerRef = useRef<RuffleElement | null>(null);
 
   useEffect(() => {
     let isMounted = true;
 
+    const destroyCurrentPlayer = () => {
+      if (activePlayerRef.current) {
+        try {
+          activePlayerRef.current.pause?.();
+          activePlayerRef.current.remove();
+        } catch {
+          // Ignorar errores al limpiar nodo
+        }
+        activePlayerRef.current = null;
+      }
+      if (containerRef.current) {
+        containerRef.current.innerHTML = '';
+      }
+    };
+
     const mountRuffle = () => {
       if (!isMounted || !containerRef.current || !window.RufflePlayer) return;
-      containerRef.current.innerHTML = '';
+      destroyCurrentPlayer();
       const ruffle = window.RufflePlayer.newest();
       const player = ruffle.createPlayer();
       player.style.width = '100%';
       player.style.height = '100%';
       containerRef.current.appendChild(player);
+      activePlayerRef.current = player;
       player.load(swfUrl);
     };
 
@@ -53,6 +73,7 @@ export const RufflePlayer: React.FC<RufflePlayerProps> = ({ swfUrl }) => {
 
     return () => {
       isMounted = false;
+      destroyCurrentPlayer();
     };
   }, [swfUrl]);
 

@@ -4,6 +4,8 @@ export interface ScoreEntry {
   gameTitle?: string;
 }
 
+export type BentoSize = 'small' | 'wide' | 'tall' | 'hero';
+
 export interface Game {
   id: number;
   title: string;
@@ -20,6 +22,8 @@ export interface Game {
   tipo: 'WEB' | 'FLASH' | 'DESCARGABLE';
   isRecommended?: boolean;
   hasRanked?: boolean;
+  mobileCompatible?: boolean;
+  bentoSize?: BentoSize;
   likes: number;
   dislikes: number;
   developer?: string;
@@ -29,21 +33,21 @@ export interface Game {
 export const API_BASE_URL = 'http://localhost:8080/api';
 
 export const DEFAULT_LEADERBOARD: ScoreEntry[] = [
-  { player: 'Rayner_UDO', score: 9850, gameTitle: 'UDOWare' },
-  { player: 'Gabriel_UI', score: 9420, gameTitle: 'UDOWare' },
+  { player: 'Rayner_UDO', score: 9850, gameTitle: 'UDOWare: MicroChaos' },
+  { player: 'Gabriel_UI', score: 9420, gameTitle: 'UDOWare: MicroChaos' },
   { player: 'Nicolas_Lider', score: 8900, gameTitle: 'Chess College' },
-  { player: 'Osmer_Backend', score: 8450, gameTitle: 'WarioWare UDO' },
-  { player: 'Ruben_Dev', score: 8150, gameTitle: 'UDOWare' },
+  { player: 'Osmer_Backend', score: 8450, gameTitle: 'Papa\'s Pizzeria' },
+  { player: 'Ruben_Dev', score: 8150, gameTitle: 'Ultimate Flash Sonic' },
 ];
 
-// Catálogo local en caso de que el Backend de Spring Boot esté apagado
 export const FALLBACK_GAMES: Game[] = [
   {
     id: 1,
     title: 'UDOWare: MicroChaos',
     alias: 'udoware',
-    description: 'Supera microjuegos frenéticos de 4 segundos inspirados en la vida universitaria antes de perder tus 4 vidas.',
-    controls: 'Ratón (Clic izquierdo para aplastar) y Teclado según la orden.',
+    description:
+      'Supera microjuegos frenéticos de 4 segundos inspirados en la vida universitaria antes de perder tus 4 vidas. ¡Incluye la historia de Mr. Perros!',
+    controls: 'Ratón / Pantalla Táctil (Clic para machacar) y Teclado según la orden.',
     categories: ['Microjuegos', 'Arcade', 'Acción'],
     ageRating: 'Niños (+7)',
     ageBadgeColor: '#7b2cbf',
@@ -53,6 +57,8 @@ export const FALLBACK_GAMES: Game[] = [
     tipo: 'WEB',
     isRecommended: true,
     hasRanked: true,
+    mobileCompatible: true,
+    bentoSize: 'hero',
     likes: 342,
     dislikes: 12,
     developer: 'Grupo Amarillo UDO',
@@ -62,8 +68,9 @@ export const FALLBACK_GAMES: Game[] = [
     id: 2,
     title: 'Chess College (Ajedrez UDO)',
     alias: 'ajedrez',
-    description: 'El clásico juego de estrategia reinventado con trampas ocultas en el tablero y modificadores multijugador.',
-    controls: 'Clic izquierdo para seleccionar piezas.',
+    description:
+      'El clásico juego de estrategia reinventado con trampas ocultas en el tablero y modificadores multijugador en tiempo real.',
+    controls: 'Clic izquierdo o toque táctil para seleccionar y mover piezas.',
     categories: ['Estrategia', '2 Jugadores', 'Puzzles'],
     ageRating: 'Para todos (+3)',
     ageBadgeColor: '#5a189a',
@@ -73,6 +80,8 @@ export const FALLBACK_GAMES: Game[] = [
     tipo: 'WEB',
     isRecommended: true,
     hasRanked: true,
+    mobileCompatible: true,
+    bentoSize: 'wide',
     likes: 285,
     dislikes: 19,
     developer: 'Grupo Ajedrez UDO',
@@ -82,17 +91,20 @@ export const FALLBACK_GAMES: Game[] = [
     id: 3,
     title: 'Electric Man 2',
     alias: 'electricman',
-    description: 'Torneo de combates de stickmans con artes marciales y poderes eléctricos en cámara lenta.',
+    description:
+      'Torneo de combates de stickmans con artes marciales y poderes eléctricos en cámara lenta.',
     controls: 'Flechas para mover, Q/W/E para ataques normales, A/S/D para cámara lenta.',
     categories: ['Acción', 'Peleas', 'Flash'],
     ageRating: 'Adolescentes (+12)',
     ageBadgeColor: '#e5a93c',
-    coverUrl: '/public/assets/covers/electriman_2.jpg',
-    previewGifUrl: '/public/assets/preview/electriman_2_preview .gif',
+    coverUrl: '/assets/covers/electriman_2.jpg',
+    previewGifUrl: '/assets/preview/electriman_2_preview.gif',
     gameUrl: '/games-swf/ElectricMan.swf',
     tipo: 'FLASH',
     isRecommended: false,
     hasRanked: false,
+    mobileCompatible: false,
+    bentoSize: 'small',
     likes: 412,
     dislikes: 18,
     developer: 'Damian Games',
@@ -102,17 +114,20 @@ export const FALLBACK_GAMES: Game[] = [
     id: 4,
     title: 'Fernanfloo Saw Game',
     alias: 'fernanfloo-saw',
-    description: 'Fernanfloo es secuestrado por Pigsaw. Resuelve acertijos para rescatar a su perrito Curly.',
-    controls: 'Clic izquierdo para interactuar, combinar objetos y moverse.',
+    description:
+      'Fernanfloo es secuestrado por Pigsaw. Resuelve acertijos point-and-click para rescatar a su perrito Curly.',
+    controls: 'Clic izquierdo o toque en pantalla para interactuar, combinar objetos y moverse.',
     categories: ['Puzzles', 'Aventura', 'Flash'],
     ageRating: 'Adolescentes (+12)',
     ageBadgeColor: '#d9385a',
-    coverUrl: '/public/assets/covers/fernanfloo_sawgame.jpg',
-    previewGifUrl: '/public/assets/preview/fernanfloo_saw_game_preview.gif',
+    coverUrl: '/assets/covers/fernanfloo_sawgame.jpg',
+    previewGifUrl: '/assets/preview/fernanfloo_saw_game_preview.gif',
     gameUrl: '/games-swf/fernanfloo-saw.swf',
     tipo: 'FLASH',
     isRecommended: false,
     hasRanked: false,
+    mobileCompatible: true,
+    bentoSize: 'tall',
     likes: 510,
     dislikes: 42,
     developer: 'InkaGames',
@@ -122,17 +137,20 @@ export const FALLBACK_GAMES: Game[] = [
     id: 5,
     title: 'Fireboy & Watergirl: Light Temple',
     alias: 'fireboy-watergirl-light',
-    description: 'Utiliza la luz y los espejos para resolver acertijos en este templo cooperativo.',
+    description:
+      'Utiliza la luz y los espejos para resolver acertijos en este templo cooperativo.',
     controls: 'WASD (Watergirl) y Flechas (Fireboy).',
     categories: ['2 Jugadores', 'Puzzles', 'Flash'],
     ageRating: 'Para todos (+3)',
     ageBadgeColor: '#5a189a',
-    coverUrl: '/public/assets/covers/Fireboy_and_Watergirl_2.webp',
-    previewGifUrl: '/public/assets/preview/fireboy_y_waergirl_2.gif',
+    coverUrl: '/assets/covers/Fireboy_and_Watergirl_2.webp',
+    previewGifUrl: '/assets/preview/fireboy_y_waergirl_2.gif',
     gameUrl: '/games-swf/Fireboy and Watergirl in The Light Temple.swf',
     tipo: 'FLASH',
     isRecommended: false,
     hasRanked: false,
+    mobileCompatible: false,
+    bentoSize: 'small',
     likes: 620,
     dislikes: 11,
     developer: 'Oslo Albet',
@@ -142,17 +160,20 @@ export const FALLBACK_GAMES: Game[] = [
     id: 6,
     title: 'Fireboy & Watergirl (Original)',
     alias: 'fireboy-watergirl',
-    description: 'La aventura clásica cooperativa donde el fuego y el agua exploran el Templo del Bosque.',
+    description:
+      'La aventura clásica cooperativa donde el fuego y el agua exploran el Templo del Bosque.',
     controls: 'WASD para mover a Watergirl y Flechas para mover a Fireboy.',
     categories: ['2 Jugadores', 'Puzzles', 'Flash'],
     ageRating: 'Para todos (+3)',
     ageBadgeColor: '#5a189a',
-    coverUrl: '/public/assets/covers/fireboy_and_watergirl_1.jpg',
-    previewGifUrl: '/public/assets/preview/fireboy_y_wathergirl_1_preview.gif',
+    coverUrl: '/assets/covers/fireboy_and_watergirl_1.jpg',
+    previewGifUrl: '/assets/preview/fireboy_y_wathergirl_1_preview.gif',
     gameUrl: '/games-swf/Fireboy And Watergirl.swf',
     tipo: 'FLASH',
     isRecommended: true,
     hasRanked: true,
+    mobileCompatible: false,
+    bentoSize: 'wide',
     likes: 745,
     dislikes: 14,
     developer: 'Oslo Albet',
@@ -160,19 +181,22 @@ export const FALLBACK_GAMES: Game[] = [
   },
   {
     id: 7,
-    title: 'Garfield\'s Scary Scavenger Hunt',
+    title: "Garfield's Scary Scavenger Hunt",
     alias: 'garfield-scary',
-    description: 'Acompaña a Garfield a explorar una mansión embrujada para encontrar donas mientras evitas sustos.',
+    description:
+      'Acompaña a Garfield a explorar una mansión embrujada para encontrar donas mientras evitas sustos.',
     controls: 'Flechas para moverse y clic en los objetos del inventario.',
     categories: ['Aventura', 'Puzzles', 'Flash'],
     ageRating: 'Niños (+7)',
     ageBadgeColor: '#2ec4b6',
-    coverUrl: '/public/assets/covers/garfield_scary_scavenger_hunt_portada.webp',
-    previewGifUrl: '/public/assets/preview/garfield_scary_scavenger_hunt_preview.gif',
+    coverUrl: '/assets/covers/garfield_scary_scavenger_hunt_portada.webp',
+    previewGifUrl: '/assets/preview/garfield_scary_scavenger_hunt_preview.gif',
     gameUrl: '/games-swf/Garfield Scary Scavenger Hunt.swf',
     tipo: 'FLASH',
     isRecommended: false,
     hasRanked: false,
+    mobileCompatible: false,
+    bentoSize: 'small',
     likes: 280,
     dislikes: 22,
     developer: 'Jim Davis',
@@ -182,17 +206,20 @@ export const FALLBACK_GAMES: Game[] = [
     id: 8,
     title: 'Gun Mayhem 2',
     alias: 'gun-mayhem-2',
-    description: 'Intensa acción de disparos en plataformas multijugador con armas alocadas y explosiones.',
-    controls: 'Flechas para mover, Z para disparar, X para lanzar bombas (Configurable).',
+    description:
+      'Intensa acción de disparos en plataformas multijugador con armas alocadas y explosiones.',
+    controls: 'Flechas para mover, Z para disparar, X para lanzar bombas.',
     categories: ['Acción', 'Disparos', '2 Jugadores', 'Flash'],
     ageRating: 'Adolescentes (+12)',
     ageBadgeColor: '#d9385a',
-    coverUrl: '/public/assets/covers/gun_mayhem_2.png',
-    previewGifUrl: '/public/assets/preview/gun_mayhen_2_preview.gif',
+    coverUrl: '/assets/covers/gun_mayhem_2.png',
+    previewGifUrl: '/assets/preview/gun_mayhen_2_preview.gif',
     gameUrl: '/games-swf/gun-mayhem-2-more-ma-13824.swf',
     tipo: 'FLASH',
     isRecommended: true,
-    hasRanked: false,
+    hasRanked: true,
+    mobileCompatible: false,
+    bentoSize: 'tall',
     likes: 890,
     dislikes: 31,
     developer: 'Kevin Gu',
@@ -200,19 +227,22 @@ export const FALLBACK_GAMES: Game[] = [
   },
   {
     id: 9,
-    title: 'Papa\'s Pizzeria',
+    title: "Papa's Pizzeria",
     alias: 'papas-pizzeria',
-    description: 'Toma pedidos, hornea pizzas y córtalas perfectamente para dejar a tus clientes felices.',
-    controls: 'Clic izquierdo para interactuar con las estaciones.',
+    description:
+      'Toma pedidos, hornea pizzas y córtalas perfectamente para dejar a tus clientes felices.',
+    controls: 'Clic izquierdo o pantalla táctil para interactuar con las estaciones.',
     categories: ['Simulación', 'Arcade', 'Flash'],
     ageRating: 'Para todos (+3)',
     ageBadgeColor: '#e5a93c',
-    coverUrl: '/public/assets/covers/papas_pizzeria.jpg',
-    previewGifUrl: '/public/assets/preview/papas_pizzeria_preview.gif',
+    coverUrl: '/assets/covers/papas_pizzeria.jpg',
+    previewGifUrl: '/assets/preview/papas_pizzeria_preview.gif',
     gameUrl: '/games-swf/Papa´s Pizzeria.swf',
     tipo: 'FLASH',
     isRecommended: true,
     hasRanked: true,
+    mobileCompatible: true,
+    bentoSize: 'wide',
     likes: 1120,
     dislikes: 15,
     developer: 'Flipline Studios',
@@ -222,17 +252,20 @@ export const FALLBACK_GAMES: Game[] = [
     id: 10,
     title: 'Syobon Action (Cat Mario)',
     alias: 'syobon-action',
-    description: 'El juego de plataformas más frustrante y troll jamás creado. Nada es lo que parece.',
+    description:
+      'El juego de plataformas más frustrante y troll jamás creado. Nada es lo que parece.',
     controls: 'Flechas direccionales para moverse y saltar.',
     categories: ['Plataformas', 'Humor', 'Flash'],
     ageRating: 'Niños (+7)',
     ageBadgeColor: '#5a189a',
-    coverUrl: '/public/assets/covers/Syobon_Action_(Cat_Mario).webp',
-    previewGifUrl: '/public/assets/preview/cat_mario_preview.gif',
+    coverUrl: '/assets/covers/Syobon_Action_(Cat_Mario).webp',
+    previewGifUrl: '/assets/preview/cat_mario_preview.gif',
     gameUrl: '/games-swf/Syobon Action.swf',
     tipo: 'FLASH',
     isRecommended: false,
     hasRanked: false,
+    mobileCompatible: false,
+    bentoSize: 'small',
     likes: 480,
     dislikes: 125,
     developer: 'Chiku',
@@ -242,17 +275,20 @@ export const FALLBACK_GAMES: Game[] = [
     id: 11,
     title: 'Tequila Zombies 2',
     alias: 'tequila-zombies-2',
-    description: 'Ábrete paso a través de hordas de zombis usando armas y superpoderes.',
+    description:
+      'Ábrete paso a través de hordas de zombis usando armas y superpoderes.',
     controls: 'WASD/Flechas para mover, Ratón para apuntar/disparar.',
     categories: ['Acción', 'Disparos', 'Flash'],
     ageRating: 'Adolescentes (+12)',
     ageBadgeColor: '#d9385a',
-    coverUrl: '/public/assets/covers/tequila_zombie_2.jpg',
-    previewGifUrl: '/public/assets/preview/tequila_zombie_2_preview.gif',
+    coverUrl: '/assets/covers/tequila_zombie_2.jpg',
+    previewGifUrl: '/assets/preview/tequila_zombie_2_preview.gif',
     gameUrl: '/games-swf/TequilaZombies2.swf',
     tipo: 'FLASH',
     isRecommended: false,
     hasRanked: false,
+    mobileCompatible: false,
+    bentoSize: 'small',
     likes: 320,
     dislikes: 24,
     developer: 'IriySoft',
@@ -262,22 +298,40 @@ export const FALLBACK_GAMES: Game[] = [
     id: 12,
     title: 'Ultimate Flash Sonic',
     alias: 'flash-sonic',
-    description: 'Una versión retro impecable del erizo azul con físicas clásicas.',
+    description:
+      'Una versión retro impecable del erizo azul con físicas clásicas.',
     controls: 'Flechas para mover, Espacio para saltar.',
     categories: ['Plataformas', 'Arcade', 'Flash'],
     ageRating: 'Para todos (+3)',
     ageBadgeColor: '#5a189a',
-    coverUrl: '/public/assets/covers/Ultimate_Flash_Sonic.webp',
-    previewGifUrl: '/public/assets/preview/ultimate_sonic_flash_preview.gif',
+    coverUrl: '/assets/covers/Ultimate_Flash_Sonic.webp',
+    previewGifUrl: '/assets/preview/ultimate_sonic_flash_preview.gif',
     gameUrl: '/games-swf/ultimateflashsonicwidescreen.swf',
     tipo: 'FLASH',
     isRecommended: true,
     hasRanked: true,
+    mobileCompatible: false,
+    bentoSize: 'wide',
     likes: 850,
     dislikes: 21,
     developer: 'Dennis-G',
     releaseDate: '2004',
   },
+];
+
+const BENTO_PATTERN: BentoSize[] = [
+  'hero',
+  'wide',
+  'small',
+  'tall',
+  'small',
+  'wide',
+  'small',
+  'tall',
+  'wide',
+  'small',
+  'small',
+  'wide',
 ];
 
 export async function fetchCatalogGames(): Promise<Game[]> {
@@ -290,36 +344,55 @@ export async function fetchCatalogGames(): Promise<Game[]> {
       return data.map((g: Record<string, unknown>, idx: number) => {
         const rawTitle = String(g.title || 'Juego Sin Título');
         const rawRoute = String(g.gameUrl || g.route || '/game-export/index.html');
-        
-        // Detección automática para Ajedrez y Flash
-        const isChess = rawTitle.toLowerCase().includes('ajedrez') || rawRoute.toLowerCase().includes('ajedrez');
+        const isChess =
+          rawTitle.toLowerCase().includes('ajedrez') ||
+          rawRoute.toLowerCase().includes('ajedrez');
         const isSwf = rawRoute.toLowerCase().endsWith('.swf');
+        const fallbackMatch = FALLBACK_GAMES[idx % FALLBACK_GAMES.length];
 
         return {
           id: Number(g.id || idx + 1),
           title: rawTitle,
-          alias: String(g.alias || rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')),
+          alias: String(
+            g.alias ||
+              rawTitle
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/(^-|-$)/g, '')
+          ),
           description: String(g.description || 'Sin descripción disponible.'),
           controls: String(g.controls || g.instructions || 'Teclado y Ratón'),
-          categories: Array.isArray(g.categories) ? g.categories.map(String) : [String(g.category || 'Arcade')],
+          categories: Array.isArray(g.categories)
+            ? g.categories.map(String)
+            : [String(g.category || 'Arcade')],
           ageRating: String(g.ageRatingName || g.ageRating || 'Para todos (+3)'),
           ageBadgeColor: String(g.ageBadgeColor || '#7b2cbf'),
-          coverUrl: String(g.portadaUrl || g.coverUrl || `https://placehold.co/800x450/240046/ffffff?text=${encodeURIComponent(rawTitle)}`),
-          previewGifUrl: String(g.previewUrl || 'https://media.giphy.com/media/13HgwGsXF0aiGY/giphy.gif'),
+          coverUrl: String(
+            g.portadaUrl || g.coverUrl || fallbackMatch.coverUrl
+          ),
+          previewGifUrl: String(
+            g.previewUrl || fallbackMatch.previewGifUrl || ''
+          ),
           gameUrl: isChess ? 'https://chesscollege.onrender.com/' : rawRoute,
           descargaUrl: g.descargaUrl ? String(g.descargaUrl) : null,
           tipo: isSwf ? 'FLASH' : ((g.tipo as 'WEB' | 'DESCARGABLE') || 'WEB'),
           isRecommended: Boolean(g.isFeatured ?? true),
-          hasRanked: true,
+          hasRanked: Boolean(g.hasRanked ?? fallbackMatch.hasRanked ?? false),
+          mobileCompatible: Boolean(
+            g.mobileCompatible ?? fallbackMatch.mobileCompatible ?? !isSwf
+          ),
+          bentoSize: BENTO_PATTERN[idx % BENTO_PATTERN.length],
           likes: Number(g.likes ?? 120 + idx * 35),
           dislikes: Number(g.dislikes ?? 8),
-          developer: isChess ? 'Grupo Ajedrez UDO' : String(g.developer || 'Comunidad UDO'),
+          developer: isChess
+            ? 'Grupo Ajedrez UDO'
+            : String(g.developer || 'Comunidad UDO'),
           releaseDate: String(g.releaseDate || '2026'),
         };
       });
     }
-  } catch (err) {
-    console.warn('Usando catálogo de respaldo porque el backend no respondió:', err);
+  } catch {
+    // Usa el catálogo local cuando el backend 8080 no está disponible
   }
   return FALLBACK_GAMES;
 }

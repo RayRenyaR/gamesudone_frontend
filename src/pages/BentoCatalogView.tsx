@@ -1,0 +1,1078 @@
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { type Game, fetchCatalogGames } from '../data/gamesData';
+import { GameViewerStage } from '../components/GameViewerStage';
+import { MorrocoyaEasterEgg } from '../components/MorrocoyaEasterEgg';
+import { soundManager } from '../data/audioConfig';
+
+type ViewMode = 'exploration' | 'bento' | 'wii-u';
+
+const BASE_SCATTER_COORDS: Array<{ x: number; y: number }> = [
+  { x: 130, y: 95 },
+  { x: 510, y: 80 },
+  { x: 910, y: 115 },
+  { x: 1330, y: 90 },
+  { x: 1720, y: 145 },
+  { x: 290, y: 375 },
+  { x: 740, y: 390 },
+  { x: 1160, y: 365 },
+  { x: 1580, y: 420 },
+  { x: 160, y: 685 },
+  { x: 620, y: 705 },
+  { x: 1080, y: 675 },
+  { x: 1510, y: 725 },
+];
+
+const CARD_WIDTH = 245;
+const CARD_HEIGHT = 160;
+const MIN_ZOOM = 0.6;
+const MAX_ZOOM = 1.4;
+const ZOOM_STEP = 0.15;
+
+const renderCategoryIcon = (category: string) => {
+  const lower = category.toLowerCase();
+  if (lower.includes('acción') || lower.includes('peleas') || lower.includes('disparos')) {
+    return (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+      </svg>
+    );
+  }
+  if (lower.includes('puzzle') || lower.includes('estrategia') || lower.includes('lógica')) {
+    return (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3">
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+      </svg>
+    );
+  }
+  if (lower.includes('2 jugadores') || lower.includes('multijugador')) {
+    return (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+    );
+  }
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3">
+      <rect x="2" y="6" width="20" height="12" rx="3" />
+      <path d="M6 12h4m-2-2v4" />
+    </svg>
+  );
+};
+
+export const BentoCatalogView: React.FC = () => {
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+
+  const [games, setGames] = useState<Game[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  const [viewMode, setViewMode] = useState<ViewMode>('exploration');
+  const [onlyFavorites, setOnlyFavorites] = useState<boolean>(false);
+  const [isChatOpen, setIsChatOpen] = useState<boolean>(false);
+
+  // Estados del Zoom en Modo Exploración
+  const [zoomLevel, setZoomLevel] = useState<number>(1);
+  const [isZoomMenuOpen, setIsZoomMenuOpen] = useState<boolean>(false);
+
+  const [showExploreIntro, setShowExploreIntro] = useState<boolean>(() => {
+    return sessionStorage.getItem('udo_explore_intro_dismissed') !== 'true';
+  });
+
+  const [isSearchExpanded, setIsSearchExpanded] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('Todas');
+  const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState<boolean>(false);
+
+  const [favorites, setFavorites] = useState<number[]>(() => {
+    const saved = localStorage.getItem('udo_fav_games');
+    return saved ? JSON.parse(saved) : [1, 2];
+  });
+  const [votes, setVotes] = useState<Record<number, 'LIKE' | 'DISLIKE'>>({});
+
+  const [activeGame, setActiveGame] = useState<Game | null>(null);
+  const [isGameCurrentlyRunning, setIsGameCurrentlyRunning] = useState<boolean>(false);
+  const [isCameraPinned, setIsCameraPinned] = useState<boolean>(false);
+  const [lastHoveredGame, setLastHoveredGame] = useState<Game | null>(null);
+  const [hoveredId, setHoveredId] = useState<number | null>(null);
+
+  const [nodePositions, setNodePositions] = useState<Record<number, { x: number; y: number; delay: string }>>({});
+  const [draggingNodeId, setDraggingNodeId] = useState<number | null>(null);
+  const nodeDragRef = useRef<{
+    gameId: number;
+    startMouseX: number;
+    startMouseY: number;
+    origX: number;
+    origY: number;
+  } | null>(null);
+
+  const [camOffset, setCamOffset] = useState<{ x: number; y: number }>({ x: -30, y: -15 });
+  const [isDraggingCanvas, setIsDraggingCanvas] = useState<boolean>(false);
+  const dragOriginRef = useRef<{ startX: number; startY: number; camX: number; camY: number }>({
+    startX: 0,
+    startY: 0,
+    camX: 0,
+    camY: 0,
+  });
+  const hasDraggedRef = useRef<boolean>(false);
+
+  const [isMobileDevice, setIsMobileDevice] = useState<boolean>(window.innerWidth <= 768);
+  const [allowBtGames, setAllowBtGames] = useState<boolean>(() => {
+    return localStorage.getItem('udo_bt_controller') === 'true';
+  });
+
+  useEffect(() => {
+    setIsLoading(true);
+    fetchCatalogGames().then((loaded) => {
+      setGames(loaded);
+      if (loaded.length > 0) setLastHoveredGame(loaded[0]);
+
+      const initialMap: Record<number, { x: number; y: number; delay: string }> = {};
+      loaded.forEach((g, idx) => {
+        const base = BASE_SCATTER_COORDS[idx % BASE_SCATTER_COORDS.length];
+        initialMap[g.id] = {
+          x: Math.max(45, base.x + Math.round((Math.random() - 0.5) * 68)),
+          y: Math.max(45, base.y + Math.round((Math.random() - 0.5) * 54)),
+          delay: `${(idx * 0.42).toFixed(2)}s`,
+        };
+      });
+      setNodePositions(initialMap);
+      setIsLoading(false);
+    });
+
+    const onResize = () => setIsMobileDevice(window.innerWidth <= 768);
+    const onPrefsChange = () => {
+      setAllowBtGames(localStorage.getItem('udo_bt_controller') === 'true');
+    };
+    const onChatToggle = (e: Event) => {
+      const custom = e as CustomEvent<{ open: boolean }>;
+      setIsChatOpen(Boolean(custom.detail?.open));
+    };
+
+    window.addEventListener('resize', onResize);
+    window.addEventListener('udo_prefs_updated', onPrefsChange);
+    window.addEventListener('udo_chat_state', onChatToggle);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('udo_prefs_updated', onPrefsChange);
+      window.removeEventListener('udo_chat_state', onChatToggle);
+    };
+  }, []);
+
+  const handleZoomChange = useCallback((delta: number) => {
+    soundManager.playClick();
+    setZoomLevel((prev) => {
+      const next = Math.round((prev + delta) * 100) / 100;
+      return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, next));
+    });
+  }, []);
+
+  const handleResetZoom = useCallback(() => {
+    soundManager.playClick();
+    setZoomLevel(1);
+  }, []);
+
+  // Centra la cámara exactamente sobre el juego (restableciendo zoom a 100% para nitidez perfecta)
+  const centerCameraOnGame = useCallback(
+    (targetGame: Game) => {
+      setZoomLevel(1);
+      const pos = nodePositions[targetGame.id] || BASE_SCATTER_COORDS[0];
+      const vw = viewportRef.current?.clientWidth || window.innerWidth - 92;
+      const vh = viewportRef.current?.clientHeight || window.innerHeight;
+
+      const viewerW = Math.min(840, Math.max(580, vw * 0.64));
+      const viewerH = Math.min(vh * 0.74, (viewerW * 9.6) / 16);
+
+      const exactCenterX = -pos.x + (vw - viewerW) / 2;
+      const exactCenterY = -pos.y + (vh - viewerH) / 2;
+
+      setCamOffset({
+        x: Math.round(exactCenterX),
+        y: Math.round(exactCenterY),
+      });
+    },
+    [nodePositions]
+  );
+
+  const handleSwitchViewMode = (nextMode: ViewMode) => {
+    soundManager.playClick();
+    if (activeGame) {
+      setActiveGame(null);
+      setIsGameCurrentlyRunning(false);
+      setIsCameraPinned(false);
+      window.dispatchEvent(
+        new CustomEvent('udo_game_playing_state', { detail: { playing: false } })
+      );
+    }
+    setIsCategoryMenuOpen(false);
+    setViewMode(nextMode);
+  };
+
+  const toggleFavorite = (gameId: number) => {
+    setFavorites((prev) => {
+      const next = prev.includes(gameId)
+        ? prev.filter((id) => id !== gameId)
+        : [...prev, gameId];
+      localStorage.setItem('udo_fav_games', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const handleVote = (gameId: number, type: 'LIKE' | 'DISLIKE') => {
+    setVotes((prev) => {
+      const current = prev[gameId];
+      if (current === type) {
+        const copy = { ...prev };
+        delete copy[gameId];
+        return copy;
+      }
+      return { ...prev, [gameId]: type };
+    });
+  };
+
+  const handleSelectGame = (game: Game) => {
+    if (hasDraggedRef.current) return;
+
+    if (activeGame && activeGame.id !== game.id && isGameCurrentlyRunning) {
+      const ok = window.confirm(
+        `¿Deseas cerrar "${activeGame.title}" para abrir "${game.title}"?`
+      );
+      if (!ok) return;
+    }
+
+    soundManager.playOpen();
+    setActiveGame(game);
+    setLastHoveredGame(game);
+
+    if (viewMode === 'exploration') {
+      centerCameraOnGame(game);
+    }
+  };
+
+  const handleTogglePinAndCenter = () => {
+    if (activeGame) {
+      centerCameraOnGame(activeGame);
+    }
+    setIsCameraPinned((prev) => !prev);
+  };
+
+  const handleNodeMouseDown = (e: React.MouseEvent, game: Game) => {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    hasDraggedRef.current = false;
+    const currentPos = nodePositions[game.id] || BASE_SCATTER_COORDS[0];
+    setDraggingNodeId(game.id);
+    nodeDragRef.current = {
+      gameId: game.id,
+      startMouseX: e.clientX,
+      startMouseY: e.clientY,
+      origX: currentPos.x,
+      origY: currentPos.y,
+    };
+  };
+
+  const handleCanvasMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0 || isCameraPinned) return;
+    setIsDraggingCanvas(true);
+    hasDraggedRef.current = false;
+    dragOriginRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      camX: camOffset.x,
+      camY: camOffset.y,
+    };
+  };
+
+  const handleCanvasMouseMove = (e: React.MouseEvent) => {
+    if (nodeDragRef.current) {
+      const { gameId, startMouseX, startMouseY, origX, origY } = nodeDragRef.current;
+      // Divide el delta por zoomLevel para que el nodo siga fielmente al puntero en cualquier escala
+      const dx = (e.clientX - startMouseX) / zoomLevel;
+      const dy = (e.clientY - startMouseY) / zoomLevel;
+      if (Math.hypot(dx, dy) > 5) {
+        hasDraggedRef.current = true;
+      }
+      const nextX = Math.max(30, Math.min(1920, origX + dx));
+      const nextY = Math.max(30, Math.min(1150, origY + dy));
+      setNodePositions((prev) => ({
+        ...prev,
+        [gameId]: {
+          ...(prev[gameId] || { delay: '0s' }),
+          x: nextX,
+          y: nextY,
+        },
+      }));
+      return;
+    }
+
+    if (!isDraggingCanvas || isCameraPinned) return;
+    const dx = e.clientX - dragOriginRef.current.startX;
+    const dy = e.clientY - dragOriginRef.current.startY;
+    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+      hasDraggedRef.current = true;
+    }
+    const nextX = Math.max(-1450, Math.min(320, dragOriginRef.current.camX + dx));
+    const nextY = Math.max(-960, Math.min(260, dragOriginRef.current.camY + dy));
+    setCamOffset({ x: nextX, y: nextY });
+  };
+
+  const handleCanvasMouseUp = () => {
+    setIsDraggingCanvas(false);
+    setDraggingNodeId(null);
+    nodeDragRef.current = null;
+    setTimeout(() => {
+      hasDraggedRef.current = false;
+    }, 50);
+  };
+
+  const nudgeCamera = (dx: number, dy: number) => {
+    if (isCameraPinned) return;
+    soundManager.playClick();
+    setCamOffset((prev) => ({
+      x: Math.max(-1450, Math.min(320, prev.x + dx)),
+      y: Math.max(-960, Math.min(260, prev.y + dy)),
+    }));
+  };
+
+  const categories = [
+    'Todas',
+    ...Array.from(new Set(games.flatMap((g) => g.categories))),
+  ];
+
+  const visibleGames = games.filter((g) => {
+    if (isMobileDevice && !allowBtGames && g.mobileCompatible === false) {
+      return false;
+    }
+    if (onlyFavorites && !favorites.includes(g.id)) {
+      return false;
+    }
+    if (viewMode !== 'exploration') {
+      const matchesSearch = g.title.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCat =
+        selectedCategory === 'Todas' || g.categories.includes(selectedCategory);
+      return matchesSearch && matchesCat;
+    }
+    return true;
+  });
+
+  const effectiveNodeCoords = useMemo(() => {
+    const activeCoord = activeGame ? nodePositions[activeGame.id] : null;
+    const result: Record<number, { x: number; y: number; delay: string }> = {};
+
+    visibleGames.forEach((game, idx) => {
+      const basePos = nodePositions[game.id] || {
+        ...BASE_SCATTER_COORDS[idx % BASE_SCATTER_COORDS.length],
+        delay: '0s',
+      };
+      let pushX = 0;
+      let pushY = 0;
+
+      if (activeCoord && activeGame?.id !== game.id) {
+        const dx = basePos.x - activeCoord.x;
+        const dy = basePos.y - activeCoord.y;
+        if (dx > -260 && dx < 840 && dy > -190 && dy < 520) {
+          pushX = dx < 290 ? -290 : 380;
+          pushY = dy < 165 ? -190 : 240;
+        }
+      }
+
+      result[game.id] = {
+        x: basePos.x + pushX,
+        y: basePos.y + pushY,
+        delay: basePos.delay,
+      };
+    });
+
+    return result;
+  }, [visibleGames, nodePositions, activeGame]);
+
+  const graphEdges = useMemo(() => {
+    const edgesMap = new Map<
+      string,
+      { idA: number; idB: number; x1: number; y1: number; x2: number; y2: number }
+    >();
+
+    visibleGames.forEach((gA) => {
+      const posA = effectiveNodeCoords[gA.id];
+      if (!posA) return;
+      const centerAx = posA.x + CARD_WIDTH / 2;
+      const centerAy = posA.y + CARD_HEIGHT / 2;
+
+      const neighbors = visibleGames
+        .filter((gB) => gB.id !== gA.id && Boolean(effectiveNodeCoords[gB.id]))
+        .map((gB) => {
+          const posB = effectiveNodeCoords[gB.id];
+          const centerBx = posB.x + CARD_WIDTH / 2;
+          const centerBy = posB.y + CARD_HEIGHT / 2;
+          const dist = Math.hypot(centerAx - centerBx, centerAy - centerBy);
+          return { gB, centerBx, centerBy, dist };
+        })
+        .sort((a, b) => a.dist - b.dist)
+        .slice(0, 4);
+
+      neighbors.forEach(({ gB, centerBx, centerBy }) => {
+        const key = `${Math.min(gA.id, gB.id)}-${Math.max(gA.id, gB.id)}`;
+        if (!edgesMap.has(key)) {
+          edgesMap.set(key, {
+            idA: gA.id,
+            idB: gB.id,
+            x1: centerAx,
+            y1: centerAy,
+            x2: centerBx,
+            y2: centerBy,
+          });
+        }
+      });
+    });
+
+    return Array.from(edgesMap.values());
+  }, [visibleGames, effectiveNodeCoords]);
+
+  if (isLoading) {
+    return (
+      <div className="tactile-panel" style={{ padding: '48px', textAlign: 'center', margin: '24px' }}>
+        <h2 style={{ fontSize: '1.4rem' }}>CARGANDO GRAFO DE JUEGOS...</h2>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* DISPLAY TUTORIAL INTRODUCTORIO */}
+      {showExploreIntro && (
+        <div className="explore-intro-overlay" onClick={() => setShowExploreIntro(false)}>
+          <div className="tactile-panel explore-intro-card" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="credit-role-badge">GUÍA DE NAVEGACIÓN</span>
+              <button
+                type="button"
+                className="icon-close-x-btn"
+                onClick={() => {
+                  soundManager.playClose();
+                  sessionStorage.setItem('udo_explore_intro_dismissed', 'true');
+                  setShowExploreIntro(false);
+                }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+
+            <h1 style={{ fontSize: '1.85rem', color: 'var(--text-main)' }}>
+              EXPLORA EL GRAFO DE JUEGOS
+            </h1>
+
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-soft)', lineHeight: 1.5 }}>
+              Desplázate por la red con el ratón o las flechas laterales, usa el control de <strong>Zoom</strong> arriba a la derecha, o <strong>mantén presionado cualquier juego para arrastrarlo</strong>.
+            </p>
+
+            <button
+              type="button"
+              className="tactile-btn-purple"
+              style={{ padding: '12px 28px', alignSelf: 'center', fontSize: '0.95rem' }}
+              onClick={() => {
+                soundManager.playOpen();
+                sessionStorage.setItem('udo_explore_intro_dismissed', 'true');
+                setShowExploreIntro(false);
+              }}
+            >
+              COMENZAR A EXPLORAR
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ================= WIDGET DE ZOOM ARRIBA A LA DERECHA (CON ANIMACIÓN HORIZONTAL) ================= */}
+      {viewMode === 'exploration' && !activeGame && (
+        <div
+          className={`tactile-panel exploration-zoom-dock ${
+            isChatOpen ? 'shift-for-chat' : ''
+          }`}
+        >
+          <div className={`zoom-controls-expandable ${isZoomMenuOpen ? 'open' : ''}`}>
+            <button
+              type="button"
+              className="tactile-btn-dark"
+              style={{ width: '34px', height: '34px', padding: 0 }}
+              onClick={() => handleZoomChange(-ZOOM_STEP)}
+              title="Alejar (Zoom Out)"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round">
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
+
+            <span
+              className="zoom-percent-badge"
+              onClick={handleResetZoom}
+              title="Clic para restablecer al 100%"
+            >
+              {Math.round(zoomLevel * 100)}%
+            </span>
+
+            <button
+              type="button"
+              className="tactile-btn-dark"
+              style={{ width: '34px', height: '34px', padding: 0 }}
+              onClick={() => handleZoomChange(ZOOM_STEP)}
+              title="Acercar (Zoom In)"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Botón Principal de Lupa con Más/Menos */}
+          <button
+            type="button"
+            className={`tactile-btn-dark ${isZoomMenuOpen ? 'active-state' : ''}`}
+            style={{ width: '38px', height: '36px', padding: 0 }}
+            onClick={() => {
+              soundManager.playClick();
+              setIsZoomMenuOpen((prev) => !prev);
+            }}
+            title="Controles de Zoom"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              <line x1="11" y1="8" x2="11" y2="14" />
+              <line x1="8" y1="11" x2="14" y2="11" />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {/* ================= 1. MODO EXPLORACIÓN ================= */}
+      {viewMode === 'exploration' && (
+        <div
+          ref={viewportRef}
+          className={`exploration-free-viewport ${isDraggingCanvas ? 'grabbing' : ''} ${
+            isCameraPinned ? 'pinned-lock' : ''
+          }`}
+          onMouseDown={handleCanvasMouseDown}
+          onMouseMove={handleCanvasMouseMove}
+          onMouseUp={handleCanvasMouseUp}
+          onMouseLeave={handleCanvasMouseUp}
+          onWheel={(e) => {
+            if (e.ctrlKey || e.metaKey) {
+              e.preventDefault();
+              handleZoomChange(e.deltaY < 0 ? 0.1 : -0.1);
+            }
+          }}
+        >
+          {!activeGame && (
+            <>
+              <button
+                type="button"
+                className="axis-guide-indicator axis-guide-top"
+                onClick={() => nudgeCamera(0, 240)}
+                title="Explorar Arriba"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="18 15 12 9 6 15" />
+                </svg>
+              </button>
+
+              <button
+                type="button"
+                className="axis-guide-indicator axis-guide-bottom"
+                onClick={() => nudgeCamera(0, -240)}
+                title="Explorar Abajo"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+
+              <button
+                type="button"
+                className="axis-guide-indicator axis-guide-left"
+                onClick={() => nudgeCamera(260, 0)}
+                title="Explorar Izquierda"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+              </button>
+
+              <button
+                type="button"
+                className="axis-guide-indicator axis-guide-right"
+                onClick={() => nudgeCamera(-260, 0)}
+                title="Explorar Derecha"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </button>
+            </>
+          )}
+
+          <div
+            className="exploration-infinite-plane"
+            style={{
+              transformOrigin: '0 0',
+              transform: `translate3d(${camOffset.x}px, ${camOffset.y}px, 0) scale(${zoomLevel})`,
+              transition: isDraggingCanvas ? 'none' : 'transform 0.38s var(--ease-smooth-push)',
+            }}
+          >
+            <svg className="exploration-graph-svg">
+              {graphEdges.map((edge) => {
+                const isHighlighted =
+                  hoveredId === edge.idA ||
+                  hoveredId === edge.idB ||
+                  activeGame?.id === edge.idA ||
+                  activeGame?.id === edge.idB;
+                return (
+                  <g key={`${edge.idA}-${edge.idB}`}>
+                    <line
+                      x1={edge.x1}
+                      y1={edge.y1}
+                      x2={edge.x2}
+                      y2={edge.y2}
+                      className={`graph-edge-line ${isHighlighted ? 'highlighted' : ''}`}
+                    />
+                    <circle
+                      cx={(edge.x1 + edge.x2) / 2}
+                      cy={(edge.y1 + edge.y2) / 2}
+                      r={isHighlighted ? 3.5 : 2}
+                      fill={isHighlighted ? 'var(--graph-line-active)' : 'var(--panel-border-outer)'}
+                      opacity={isHighlighted ? 0.95 : 0.45}
+                    />
+                  </g>
+                );
+              })}
+            </svg>
+
+            {visibleGames.map((game) => {
+              const coord = effectiveNodeCoords[game.id] || { x: 120, y: 90, delay: '0s' };
+              const isExpandedHere = activeGame?.id === game.id;
+              const isHovered = hoveredId === game.id;
+              const isFav = favorites.includes(game.id);
+              const isBeingDragged = draggingNodeId === game.id;
+
+              return (
+                <div
+                  key={`${game.id}-${onlyFavorites ? 'fav' : 'all'}`}
+                  className={`scatter-node-wrapper pop-item-enter ${
+                    isBeingDragged ? 'dragging-node' : ''
+                  }`}
+                  style={{
+                    left: `${coord.x}px`,
+                    top: `${coord.y}px`,
+                    zIndex: isExpandedHere ? 80 : isHovered ? 25 : 5,
+                  }}
+                >
+                  {isExpandedHere ? (
+                    <GameViewerStage
+                      game={game}
+                      isFavorite={isFav}
+                      userVote={votes[game.id]}
+                      isExplorationMode={true}
+                      isCameraPinned={isCameraPinned}
+                      onTogglePinCamera={handleTogglePinAndCenter}
+                      onToggleFavorite={toggleFavorite}
+                      onVote={handleVote}
+                      onClose={() => {
+                        setActiveGame(null);
+                        setIsCameraPinned(false);
+                      }}
+                      onPlayingChange={setIsGameCurrentlyRunning}
+                    />
+                  ) : (
+                    <div
+                      className={isBeingDragged ? '' : 'floating-space-wobble'}
+                      style={{ animationDelay: coord.delay }}
+                    >
+                      <article
+                        className="game-bevel-card"
+                        style={{ width: `${CARD_WIDTH}px`, height: `${CARD_HEIGHT}px` }}
+                        onMouseDown={(e) => handleNodeMouseDown(e, game)}
+                        onMouseEnter={() => {
+                          soundManager.playHover();
+                          setHoveredId(game.id);
+                          setLastHoveredGame(game);
+                        }}
+                        onMouseLeave={() => setHoveredId(null)}
+                        onClick={() => handleSelectGame(game)}
+                      >
+                        <div className="game-card-inner-clip">
+                          <img
+                            src={isHovered && game.previewGifUrl ? game.previewGifUrl : game.coverUrl}
+                            alt={game.title}
+                            draggable={false}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                          />
+
+                          <div
+                            style={{
+                              position: 'absolute',
+                              inset: 0,
+                              background:
+                                'linear-gradient(180deg, transparent 40%, rgba(9, 5, 18, 0.92) 100%)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              justifyContent: 'flex-end',
+                              padding: '12px',
+                            }}
+                          >
+                            <div style={{ color: '#ffffff', fontSize: '0.9rem', lineHeight: 1.15 }}>
+                              {game.title}
+                            </div>
+                          </div>
+                        </div>
+                      </article>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ================= 2. MODO BENTO Y MODO WII U ================= */}
+      {viewMode !== 'exploration' && (
+        <div className={viewMode === 'bento' ? 'friv-bento-grid' : 'wiiu-channel-grid'}>
+          {visibleGames.map((game) => {
+            const isHovered = hoveredId === game.id;
+            const sizeClass = `size-${game.bentoSize || 'small'}`;
+
+            if (viewMode === 'wii-u') {
+              return (
+                <div
+                  key={`${game.id}-${onlyFavorites ? 'fav' : 'all'}`}
+                  className="wiiu-channel-tile pop-item-enter"
+                  onMouseEnter={() => {
+                    soundManager.playHover();
+                    setHoveredId(game.id);
+                    setLastHoveredGame(game);
+                  }}
+                  onMouseLeave={() => setHoveredId(null)}
+                  onClick={() => handleSelectGame(game)}
+                >
+                  <div className="wiiu-channel-inner">
+                    <img
+                      src={isHovered && game.previewGifUrl ? game.previewGifUrl : game.coverUrl}
+                      alt={game.title}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  </div>
+                  <div
+                    style={{
+                      textAlign: 'center',
+                      fontSize: '0.86rem',
+                      paddingTop: '6px',
+                      color: 'var(--text-main)',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {game.title}
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <article
+                key={`${game.id}-${onlyFavorites ? 'fav' : 'all'}`}
+                className={`game-bevel-card ${sizeClass} pop-item-enter`}
+                onMouseEnter={() => {
+                  soundManager.playHover();
+                  setHoveredId(game.id);
+                  setLastHoveredGame(game);
+                }}
+                onMouseLeave={() => setHoveredId(null)}
+                onClick={() => handleSelectGame(game)}
+              >
+                <div className="game-card-inner-clip">
+                  <img
+                    src={isHovered && game.previewGifUrl ? game.previewGifUrl : game.coverUrl}
+                    alt={game.title}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background:
+                        'linear-gradient(180deg, transparent 45%, rgba(9, 5, 18, 0.92) 100%)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'flex-end',
+                      padding: '12px',
+                    }}
+                  >
+                    <div style={{ color: '#ffffff', fontSize: '0.95rem' }}>{game.title}</div>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+
+      {/* MODAL PARA MODO BENTO Y WII U */}
+      {viewMode !== 'exploration' && activeGame && (
+        <div
+          className="fullscreen-modal-backdrop"
+          onClick={() => {
+            soundManager.playClose();
+            setActiveGame(null);
+            setIsGameCurrentlyRunning(false);
+            window.dispatchEvent(
+              new CustomEvent('udo_game_playing_state', { detail: { playing: false } })
+            );
+          }}
+        >
+          <GameViewerStage
+            game={activeGame}
+            isFavorite={favorites.includes(activeGame.id)}
+            userVote={votes[activeGame.id]}
+            isExplorationMode={false}
+            onToggleFavorite={toggleFavorite}
+            onVote={handleVote}
+            onClose={() => {
+              setActiveGame(null);
+              setIsGameCurrentlyRunning(false);
+            }}
+            onPlayingChange={setIsGameCurrentlyRunning}
+          />
+        </div>
+      )}
+
+      {/* ================= 3. BURBUJA MORFEANTE "ÚLTIMO VISTO" ================= */}
+      {viewMode === 'exploration' && lastHoveredGame && !activeGame && (
+        <div
+          className="friv-companion-bubble"
+          onClick={() => handleSelectGame(lastHoveredGame)}
+          title="Haz clic para abrir el último juego visto"
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '0.64rem', color: 'var(--accent-gold)', letterSpacing: '0.8px' }}>
+              ÚLTIMO VISTO
+            </span>
+            <span style={{ fontSize: '0.64rem', background: 'rgba(0,0,0,0.45)', padding: '2px 7px', borderRadius: '99px' }}>
+              {lastHoveredGame.categories[0]}
+            </span>
+          </div>
+
+          <div
+            style={{
+              width: '100%',
+              height: '82px',
+              borderRadius: '14px',
+              overflow: 'hidden',
+              border: '2px solid rgba(255,255,255,0.45)',
+            }}
+          >
+            <img
+              src={lastHoveredGame.coverUrl}
+              alt={lastHoveredGame.title}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            />
+          </div>
+
+          <div>
+            <div
+              style={{
+                fontSize: '0.86rem',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {lastHoveredGame.title}
+            </div>
+            <div style={{ fontSize: '0.66rem', color: '#e2dcf0' }}>
+              Clic aquí para expandir
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= 4. BARRA INFERIOR (FILTRO PRIMERO A LA IZQUIERDA + LUPA DESPUÉS) ================= */}
+      <footer
+        className={`tactile-panel bottom-right-hud-dock ${
+          viewMode !== 'exploration' ? 'extended-full-bar' : ''
+        } ${isChatOpen ? 'shift-for-chat' : ''}`}
+      >
+        <div
+          className={`hud-left-search-filters ${
+            viewMode !== 'exploration' ? 'revealed' : ''
+          }`}
+        >
+          {/* 1. PRIMERO A LA IZQUIERDA: Combobox de Categorías / Filtros */}
+          <div className="custom-upward-combobox">
+            <button
+              type="button"
+              className={`tactile-btn-dark ${selectedCategory !== 'Todas' ? 'active-state' : ''}`}
+              style={{ height: '38px', padding: '0 13px', fontSize: '0.8rem' }}
+              onClick={() => {
+                soundManager.playClick();
+                setIsCategoryMenuOpen((prev) => !prev);
+              }}
+            >
+              {renderCategoryIcon(selectedCategory)}
+              <span>{selectedCategory}</span>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <polyline points="18 15 12 9 6 15" />
+              </svg>
+            </button>
+
+            {isCategoryMenuOpen && (
+              <div className="custom-upward-menu">
+                {categories.map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    className={`combobox-option-btn ${selectedCategory === cat ? 'selected' : ''}`}
+                    onClick={() => {
+                      soundManager.playClick();
+                      setSelectedCategory(cat);
+                      setIsCategoryMenuOpen(false);
+                    }}
+                  >
+                    {renderCategoryIcon(cat)}
+                    <span>{cat}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 2. A SU DERECHA: Botón de Lupa que despliega la barra de búsqueda */}
+          <div className={`animated-search-pod ${isSearchExpanded ? 'expanded' : 'collapsed'}`}>
+            <button
+              type="button"
+              className="tactile-btn-dark"
+              style={{
+                border: 'none',
+                borderRadius: 0,
+                width: '42px',
+                height: '38px',
+                padding: 0,
+                boxShadow: 'none',
+                flexShrink: 0,
+              }}
+              onClick={() => {
+                soundManager.playClick();
+                setIsSearchExpanded((prev) => {
+                  const next = !prev;
+                  if (next) setTimeout(() => searchInputRef.current?.focus(), 120);
+                  else setSearchQuery('');
+                  return next;
+                });
+              }}
+              title="Buscar juego"
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </button>
+
+            {isSearchExpanded && (
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Escribe para buscar..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  flex: 1,
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-main)',
+                  outline: 'none',
+                  padding: '0 10px',
+                  fontSize: '0.82rem',
+                }}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Sub-recuadro derecho con etiqueta superior "VISTAS" */}
+        <div className="hud-right-views-wrapper">
+          <span className="hud-views-label">VISTAS</span>
+          <div className="hud-right-views-subbox">
+            <button
+              type="button"
+              className={`tactile-btn-dark ${viewMode === 'exploration' ? 'active-state' : ''}`}
+              style={{ width: '38px', height: '36px', padding: 0 }}
+              onClick={() => handleSwitchViewMode('exploration')}
+              title="Modo Exploración (Grafo Libre)"
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <circle cx="12" cy="12" r="10" />
+                <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+              </svg>
+            </button>
+
+            <button
+              type="button"
+              className={`tactile-btn-dark ${viewMode === 'bento' ? 'active-state' : ''}`}
+              style={{ width: '38px', height: '36px', padding: 0 }}
+              onClick={() => handleSwitchViewMode('bento')}
+              title="Vista Cuadrícula Bento"
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <rect x="3" y="3" width="10" height="10" rx="1" />
+                <rect x="16" y="3" width="5" height="10" rx="1" />
+                <rect x="3" y="16" width="5" height="5" rx="1" />
+                <rect x="11" y="16" width="10" height="5" rx="1" />
+              </svg>
+            </button>
+
+            <button
+              type="button"
+              className={`tactile-btn-dark ${viewMode === 'wii-u' ? 'active-state' : ''}`}
+              style={{ width: '38px', height: '36px', padding: 0 }}
+              onClick={() => handleSwitchViewMode('wii-u')}
+              title="Vista Canales Wii U"
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <rect x="2" y="4" width="20" height="16" rx="6" />
+                <rect x="6" y="8" width="12" height="8" rx="2" />
+              </svg>
+            </button>
+
+            <button
+              type="button"
+              className={`tactile-btn-dark ${onlyFavorites ? 'active-state' : ''}`}
+              style={{ width: '38px', height: '36px', padding: 0 }}
+              onClick={() => {
+                soundManager.playClick();
+                setOnlyFavorites((prev) => !prev);
+              }}
+              title="Filtrar Favoritos"
+            >
+              <svg
+                width="17"
+                height="17"
+                viewBox="0 0 24 24"
+                fill={onlyFavorites ? 'currentColor' : 'none'}
+                stroke="currentColor"
+                strokeWidth="2.2"
+              >
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </footer>
+
+      {viewMode !== 'exploration' && <MorrocoyaEasterEgg />}
+    </div>
+  );
+};
