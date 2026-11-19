@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { PLAYLIST_TRACKS, soundManager } from '../data/audioConfig';
 import '../pages/CatalogStyles.css';
 
-export type ThemeId = 'friv2' | 'xbox-y2k' | 'wii' | 'wii-dark';
+export type ThemeId = 'friv2';
 
 interface GeneralChatMessage {
   id: number;
@@ -22,10 +22,6 @@ const formatAudioTime = (seconds: number): string => {
 export const MainLayout: React.FC = () => {
   const navigate = useNavigate();
   const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  const [theme, setTheme] = useState<ThemeId>(() => {
-    return (localStorage.getItem('udo_theme') as ThemeId) || 'friv2';
-  });
 
   const [lowSpecMode, setLowSpecMode] = useState<boolean>(() => {
     return localStorage.getItem('udo_low_spec') === 'true';
@@ -65,9 +61,9 @@ export const MainLayout: React.FC = () => {
   const currentTrack = PLAYLIST_TRACKS[trackIndex % PLAYLIST_TRACKS.length];
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('udo_theme', theme);
-  }, [theme]);
+    document.documentElement.setAttribute('data-theme', 'friv2');
+    localStorage.setItem('udo_theme', 'friv2');
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('udo_low_spec', String(lowSpecMode));
@@ -380,7 +376,7 @@ export const MainLayout: React.FC = () => {
               soundManager.playClick();
               setIsUserPodOpen((prev) => !prev);
             }}
-            title="Configuración, Audio y Temas"
+            title="Configuración y Audio"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3">
               <circle cx="12" cy="12" r="3" />
@@ -522,58 +518,6 @@ export const MainLayout: React.FC = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.66rem', color: 'var(--text-soft)' }}>
               <span>{formatAudioTime(currentTime)}</span>
               <span>{formatAudioTime(duration)}</span>
-            </div>
-          </div>
-
-          <div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-soft)', marginBottom: '5px' }}>
-              PALETA DEL SISTEMA:
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-              <button
-                type="button"
-                className={`tactile-btn-dark ${theme === 'friv2' ? 'active-state' : ''}`}
-                style={{ padding: '6px 8px', fontSize: '0.74rem' }}
-                onClick={() => {
-                  soundManager.playClick();
-                  setTheme('friv2');
-                }}
-              >
-                Friv Y2K
-              </button>
-              <button
-                type="button"
-                className={`tactile-btn-dark ${theme === 'xbox-y2k' ? 'active-state' : ''}`}
-                style={{ padding: '6px 8px', fontSize: '0.74rem' }}
-                onClick={() => {
-                  soundManager.playClick();
-                  setTheme('xbox-y2k');
-                }}
-              >
-                Xbox Plasma
-              </button>
-              <button
-                type="button"
-                className={`tactile-btn-dark ${theme === 'wii' ? 'active-state' : ''}`}
-                style={{ padding: '6px 8px', fontSize: '0.74rem' }}
-                onClick={() => {
-                  soundManager.playClick();
-                  setTheme('wii');
-                }}
-              >
-                Wii U Gloss
-              </button>
-              <button
-                type="button"
-                className={`tactile-btn-dark ${theme === 'wii-dark' ? 'active-state' : ''}`}
-                style={{ padding: '6px 8px', fontSize: '0.74rem' }}
-                onClick={() => {
-                  soundManager.playClick();
-                  setTheme('wii-dark');
-                }}
-              >
-                Wii Dark
-              </button>
             </div>
           </div>
 
