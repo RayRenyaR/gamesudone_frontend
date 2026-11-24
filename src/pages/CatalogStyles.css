@@ -1562,3 +1562,278 @@ textarea {
   gap: 8px;
   padding: 16px;
 }
+
+
+/* ==========================================================================
+   SISTEMA DE TEMAS FESTIVOS: NAVIDAD
+   ========================================================================== */
+.y2k-app-shell[data-seasonal="christmas"] {
+  --bg-grad-top: #114b36;
+  --bg-grad-mid: #0a2922;
+  --bg-grad-bot: #051314;
+
+  --fiber-line-1: rgba(255, 209, 102, 0.32);
+  --fiber-line-2: rgba(230, 25, 60, 0.28);
+
+  --panel-elevated: rgba(16, 62, 46, 0.92);
+  --panel-base: rgba(10, 34, 28, 0.96);
+  --panel-inset-bg: rgba(7, 22, 19, 0.94);
+  --panel-card-bg: rgba(18, 52, 40, 0.94);
+  --panel-border-outer: #e63946;
+  --bevel-corner-highlight: #fff3c4;
+  --graph-line-color: rgba(255, 214, 112, 0.42);
+  --graph-line-active: rgba(255, 82, 110, 0.92);
+
+  --primary-top: #ff4d6d;
+  --primary-mid: #d90429;
+  --primary-bot: #8d0801;
+  --primary-shadow: #4a0404;
+  --primary-border: #ffd166;
+
+  --secondary-btn-top: rgba(24, 84, 62, 0.95);
+  --secondary-btn-bot: rgba(12, 44, 34, 0.98);
+  --secondary-btn-shadow: #061c16;
+}
+
+.sidebar-orb-logo {
+  position: relative;
+}
+
+/* gorritos de navidad sobre juegos, avatar y logo */
+.seasonal-santa-hat {
+  position: absolute;
+  pointer-events: none;
+  z-index: 24;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.55));
+}
+
+.seasonal-santa-hat.hat-variant-card {
+  top: -22px;
+  right: -12px;
+  width: 52px;
+  height: 42px;
+  transform: rotate(16deg);
+}
+
+.seasonal-santa-hat.hat-variant-avatar {
+  top: -16px;
+  right: -10px;
+  width: 34px;
+  height: 28px;
+  transform: rotate(14deg);
+}
+
+.seasonal-santa-hat.hat-variant-orb {
+  top: -17px;
+  right: -9px;
+  width: 36px;
+  height: 30px;
+  transform: rotate(15deg);
+}
+
+/* guirnalda superior de luces parpadeantes */
+.xmas-top-lights {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 24px;
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-start;
+  border-top: 3px solid rgba(15, 58, 38, 0.85);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.xmas-bulb {
+  width: 11px;
+  height: 15px;
+  border-radius: 50% 50% 60% 60%;
+  margin-top: -2px;
+  animation: xmasTwinkle 1.6s infinite alternate ease-in-out;
+}
+
+.xmas-bulb.bulb-color-0 {
+  background: #ff2a55;
+  box-shadow: 0 0 12px #ff2a55;
+}
+
+.xmas-bulb.bulb-color-1 {
+  background: #ffd166;
+  box-shadow: 0 0 12px #ffd166;
+}
+
+.xmas-bulb.bulb-color-2 {
+  background: #06d6a0;
+  box-shadow: 0 0 12px #06d6a0;
+}
+
+.xmas-bulb.bulb-color-3 {
+  background: #5ce1e6;
+  box-shadow: 0 0 12px #5ce1e6;
+}
+
+@keyframes xmasTwinkle {
+  0% { opacity: 0.45; transform: scale(0.92); }
+  100% { opacity: 1; transform: scale(1.1); }
+}
+
+/* arbol de navidad de fondo */
+.xmas-bg-tree {
+  position: absolute;
+  left: 50%;
+  bottom: -26px;
+  width: min(460px, 52vw);
+  height: auto;
+  transform: translateX(-50%);
+  opacity: 0.72;
+  filter: drop-shadow(0 0 24px rgba(255, 209, 102, 0.18));
+  pointer-events: none;
+}
+
+/* bolas de navidad flotando en lugar de la lava */
+.xmas-floating-ornament {
+  position: absolute;
+  bottom: -120px;
+  border-radius: 50%;
+  box-shadow:
+    inset -10px -12px 20px rgba(0, 0, 0, 0.42),
+    inset 10px 10px 16px rgba(255, 255, 255, 0.45),
+    0 0 22px rgba(0, 0, 0, 0.35);
+  animation: xmasOrnamentRise infinite ease-in-out;
+  will-change: transform;
+}
+
+.xmas-floating-ornament::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 22%;
+  height: 12px;
+  border-radius: 4px 4px 0 0;
+  background: linear-gradient(180deg, #ffe58f, #d97706);
+  border: 1.5px solid #fff3b0;
+}
+
+.xmas-floating-ornament.ornament-red {
+  background: radial-gradient(circle at 32% 28%, #ff758f, #d90429 60%, #6a040f 100%);
+}
+
+.xmas-floating-ornament.ornament-gold {
+  background: radial-gradient(circle at 32% 28%, #fff3b0, #f59e0b 60%, #92400e 100%);
+}
+
+.xmas-floating-ornament.ornament-green {
+  background: radial-gradient(circle at 32% 28%, #6ee7b7, #059669 60%, #064e3b 100%);
+}
+
+@keyframes xmasOrnamentRise {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(-6deg);
+  }
+  50% {
+    transform: translate3d(18px, -68vh, 0) rotate(8deg);
+  }
+  100% {
+    transform: translate3d(-12px, 0, 0) rotate(-6deg);
+  }
+}
+
+/* nieve suave */
+.xmas-snowflake {
+  position: absolute;
+  top: -16px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.7);
+  animation: xmasSnowFall linear infinite;
+  will-change: transform;
+}
+
+@keyframes xmasSnowFall {
+  0% {
+    transform: translate3d(0, -10px, 0);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.85;
+  }
+  88% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate3d(32px, 105vh, 0);
+    opacity: 0;
+  }
+}
+
+/* santa claus repentino volando en trineo */
+.xmas-flying-santa {
+  position: absolute;
+  left: 0;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  pointer-events: none;
+  opacity: 0.88;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55));
+  will-change: transform;
+}
+
+.xmas-santa-bubble {
+  margin-left: 46px;
+  margin-bottom: -4px;
+  padding: 2px 9px;
+  border-radius: 10px 10px 10px 2px;
+  background: #ffffff;
+  color: #b91c1c;
+  border: 2px solid #ffd166;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.xmas-flying-santa.fly-ltr {
+  animation: santaFlyLtr 7.5s linear forwards;
+}
+
+.xmas-flying-santa.fly-rtl {
+  animation: santaFlyRtl 7.5s linear forwards;
+}
+
+.xmas-flying-santa.fly-rtl svg {
+  transform: scaleX(-1);
+}
+
+@keyframes santaFlyLtr {
+  0% {
+    transform: translate3d(-260px, 18px, 0) rotate(-4deg);
+  }
+  50% {
+    transform: translate3d(52vw, -22px, 0) rotate(3deg);
+  }
+  100% {
+    transform: translate3d(115vw, 12px, 0) rotate(-3deg);
+  }
+}
+
+@keyframes santaFlyRtl {
+  0% {
+    transform: translate3d(115vw, 14px, 0) rotate(4deg);
+  }
+  50% {
+    transform: translate3d(48vw, -24px, 0) rotate(-3deg);
+  }
+  100% {
+    transform: translate3d(-260px, 16px, 0) rotate(3deg);
+  }
+}
+
+.low-spec-mode .xmas-floating-ornament,
+.low-spec-mode .xmas-snowflake,
+.low-spec-mode .xmas-flying-santa {
+  display: none !important;
+}

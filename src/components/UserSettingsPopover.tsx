@@ -1,5 +1,7 @@
 import React from 'react';
 import { soundManager } from '../data/audioConfig';
+import { type SeasonalOverride, type SeasonalThemeId } from '../data/seasonalThemes';
+import { SantaHatOverlay } from './SeasonalDecorations';
 
 interface UserSettingsPopoverProps {
   isOpen: boolean;
@@ -14,6 +16,10 @@ interface UserSettingsPopoverProps {
   onToggleSfx: () => void;
   onToggleLowSpec: () => void;
   onClose: () => void;
+
+  seasonalThemeId?: SeasonalThemeId;
+  seasonalOverride?: SeasonalOverride;
+  onChangeSeasonalOverride?: (next: SeasonalOverride) => void;
 }
 
 export const UserSettingsPopover: React.FC<UserSettingsPopoverProps> = ({
@@ -29,6 +35,9 @@ export const UserSettingsPopover: React.FC<UserSettingsPopoverProps> = ({
   onToggleSfx,
   onToggleLowSpec,
   onClose,
+  seasonalThemeId = 'default',
+  seasonalOverride = 'auto',
+  onChangeSeasonalOverride,
 }) => {
   if (!isOpen) return null;
 
@@ -38,31 +47,33 @@ export const UserSettingsPopover: React.FC<UserSettingsPopoverProps> = ({
     <div className="tactile-panel sidebar-settings-popover">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div
-            onClick={() => {
-              soundManager.playClick();
-              alert('Modulo externo: Editor de Avatar');
-            }}
-            title="Avatar de usuario"
-            style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: '12px 3px 12px 3px',
-              background: 'linear-gradient(135deg, var(--primary-top), var(--primary-bot))',
-              border: '2px solid #ffffff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#ffffff',
-              cursor: 'pointer',
-              flexShrink: 0,
-              overflow: 'hidden',
-            }}
-          >
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-              <circle cx="12" cy="8" r="4.5" />
-              <path d="M20 21a8 8 0 0 0-16 0" />
-            </svg>
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            {seasonalThemeId === 'christmas' && <SantaHatOverlay variant="avatar" />}
+            <div
+              onClick={() => {
+                soundManager.playClick();
+                alert('Modulo externo: Editor de Avatar');
+              }}
+              title="Avatar de usuario"
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '12px 3px 12px 3px',
+                background: 'linear-gradient(135deg, var(--primary-top), var(--primary-bot))',
+                border: '2px solid #ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#ffffff',
+                cursor: 'pointer',
+                overflow: 'hidden',
+              }}
+            >
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <circle cx="12" cy="8" r="4.5" />
+                <path d="M20 21a8 8 0 0 0-16 0" />
+              </svg>
+            </div>
           </div>
 
           <div>
@@ -128,7 +139,40 @@ export const UserSettingsPopover: React.FC<UserSettingsPopoverProps> = ({
           <div className={`y2k-switch-pill ${lowSpecMode ? 'checked' : ''}`}>
             <div className="y2k-switch-thumb" />
           </div>
+
+        
+        
+        
         </div>
+      
+      {onChangeSeasonalOverride && (
+          <div className="y2k-toggle-row" style={{ cursor: 'default', flexDirection: 'column', alignItems: 'stretch', gap: '7px' }}>
+            <span>Tema Festivo</span>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              {(
+                [
+                  { id: 'auto', text: 'Auto' },
+                  { id: 'default', text: 'Normal' },
+                  { id: 'christmas', text: 'Navidad' },
+                ] as const
+              ).map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  className={`tactile-btn-dark ${seasonalOverride === opt.id ? 'active-state' : ''}`}
+                  style={{ flex: 1, padding: '5px 6px', fontSize: '0.72rem' }}
+                  onClick={() => {
+                    soundManager.playClick();
+                    onChangeSeasonalOverride(opt.id);
+                  }}
+                >
+                  {opt.text}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
       </div>
 
       <div style={{ display: 'flex', gap: '8px' }}>

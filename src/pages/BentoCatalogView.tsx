@@ -10,6 +10,8 @@ import { RecommendedBubblesTray } from '../components/RecommendedBubblesTray';
 import { CatalogCardBadge } from '../components/CatalogCardBadge';
 import { resolveRecommendedGames } from '../data/recommendationsEngine';
 import { CATALOG_AD_SLOTS, type CatalogAdSlot } from '../data/adSlotsData';
+import { useSeasonalTheme } from '../data/seasonalThemes';
+import { GameSeasonalOverlay } from '../components/SeasonalDecorations';
 
 type ViewMode = 'exploration' | 'bento' | 'wii-u';
 
@@ -225,6 +227,7 @@ export const BentoCatalogView: React.FC = () => {
 
   const { alias: routeAlias } = useParams<{ alias?: string }>();
   const navigate = useNavigate();
+  const { theme: seasonalTheme } = useSeasonalTheme();
 
   // estado de catalogo y filtros
   const [games, setGames] = useState<Game[]>([]);
@@ -920,6 +923,7 @@ export const BentoCatalogView: React.FC = () => {
                         onMouseLeave={() => setHoveredId(null)}
                         onClick={() => handleSelectGame(game)}
                       >
+                        <GameSeasonalOverlay themeId={seasonalTheme.id} gameId={game.id} />
                         <div className="game-card-inner-clip">
                           <img
                             src={isHovered && game.previewGifUrl ? game.previewGifUrl : game.coverUrl}
@@ -1078,6 +1082,7 @@ export const BentoCatalogView: React.FC = () => {
                   onMouseLeave={() => setHoveredId(null)}
                   onClick={() => handleSelectGame(game)}
                 >
+                  <GameSeasonalOverlay themeId={seasonalTheme.id} gameId={game.id} />
                   <div className="wiiu-channel-inner">
                     {isRec && <CatalogCardBadge label="RECOMENDADO" />}
                     <img

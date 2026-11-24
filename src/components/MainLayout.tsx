@@ -3,6 +3,9 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { MAIN_THEME_URL, soundManager } from '../data/audioConfig';
 import { GeneralChatDrawer } from './GeneralChatDrawer';
 import { UserSettingsPopover } from './UserSettingsPopOver';
+import { useSeasonalTheme } from '../data/seasonalThemes';
+import { SeasonalBackdropLayer } from './SeasonalBackdropLayer';
+import { SantaHatOverlay } from './SeasonalDecorations';
 import '../pages/CatalogStyles.css';
 
 export const MainLayout: React.FC = () => {
@@ -24,6 +27,25 @@ export const MainLayout: React.FC = () => {
   const [pausedByGame, setPausedByGame] = useState<boolean>(false);
   const [isUserPodOpen, setIsUserPodOpen] = useState<boolean>(false);
   const [isChatDrawerOpen, setIsChatDrawerOpen] = useState<boolean>(false);
+  const {
+    theme: seasonalTheme,
+    override: seasonalOverride,
+    setOverride: setSeasonalOverride,
+  } = useSeasonalTheme();
+  const [activeMusicUrl, setActiveMusicUrl] = useState<string>(seasonalTheme.musicUrl);
+
+  // actualiza la pista musical al cambiar de tema festivo
+  useEffect(() => {
+    setActiveMusicUrl(seasonalTheme.musicUrl);
+  }, [seasonalTheme.musicUrl]);
+
+  useEffect(() => {
+    if (!audioRef.current) return;
+    audioRef.current.load();
+    if (musicEnabled && !pausedByGame) {
+      audioRef.current.play().catch(() => {});
+    }
+  }, [activeMusicUrl]);
 
   const userLevel = 7;
   const userCurrentXp = 680;
@@ -87,25 +109,23 @@ export const MainLayout: React.FC = () => {
   };
 
   return (
-    <div className={`y2k-app-shell ${lowSpecMode ? 'low-spec-mode' : ''}`}>
-      <audio ref={audioRef} src={MAIN_THEME_URL} loop />
+    <div
+      className={`y2k-app-shell ${lowSpecMode ? 'low-spec-mode' : ''}`}
+      data-seasonal={seasonalTheme.id}
+    >
+      <audio
+        ref={audioRef}
+        src={activeMusicUrl}
+        loop
+        onError={() => {
+          // si aun no existe el archivo festivo, vuelve al tema principal sin error
+          if (activeMusicUrl !== MAIN_THEME_URL) {
+            setActiveMusicUrl(MAIN_THEME_URL);
+          }
+        }}
+      />
 
-      <div className="lava-lamp-container" aria-hidden="true">
-        <svg
-          className="ghost-fibers-svg"
-          viewBox="0 0 1440 900"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          preserveAspectRatio="none"
-        >
-          <path d="M-100 180 C 320 420, 720 -80, 1540 240" stroke="var(--fiber-line-1)" strokeWidth="3.5" />
-          <path d="M-100 340 C 420 80, 880 580, 1540 190" stroke="var(--fiber-line-2)" strokeWidth="2.5" />
-          <path d="M-100 620 C 380 320, 920 820, 1540 480" stroke="var(--fiber-line-1)" strokeWidth="4" />
-          <path d="M-100 760 C 520 640, 760 220, 1540 720" stroke="var(--fiber-line-2)" strokeWidth="2" />
-        </svg>
-        <div className="lava-blob blob-1" />
-        <div className="lava-blob blob-2" />
-      </div>
+      <SeasonalBackdropLayer themeId={seasonalTheme.id} lowSpecMode={lowSpecMode} />
 
       <aside className="y2k-left-sidebar" aria-label="Navegación Principal">
         <svg className="sidebar-svg-bg" viewBox="0 0 92 1000" preserveAspectRatio="none">
@@ -133,6 +153,7 @@ export const MainLayout: React.FC = () => {
             }}
             title="Inicio — Catálogo de Juegos"
           >
+            {seasonalTheme.hasUserHat && <SantaHatOverlay variant="orb" />}
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
               <rect x="2" y="6" width="20" height="12" rx="4" />
               <path d="M6 12h4m-2-2v4" />
@@ -244,6 +265,7 @@ export const MainLayout: React.FC = () => {
       </aside>
 
       <UserSettingsPopover
+        
         isOpen={isUserPodOpen}
         userLevel={userLevel}
         userCurrentXp={userCurrentXp}
@@ -263,6 +285,11 @@ export const MainLayout: React.FC = () => {
           setLowSpecMode((prev) => !prev);
         }}
         onClose={() => setIsUserPodOpen(false)}
+
+        seasonalThemeId={seasonalTheme.id}
+        seasonalOverride={seasonalOverride}
+        onChangeSeasonalOverride={setSeasonalOverride}
+
       />
 
       <main className="y2k-main-stage">
