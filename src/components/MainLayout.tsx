@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { PLAYLIST_TRACKS, soundManager } from '../data/audioConfig';
+import { MAIN_THEME_URL, soundManager } from '../data/audioConfig';
 import '../pages/CatalogStyles.css';
-
-export type ThemeId = 'friv2';
 
 interface GeneralChatMessage {
   id: number;
@@ -11,13 +9,6 @@ interface GeneralChatMessage {
   text: string;
   time: string;
 }
-
-const formatAudioTime = (seconds: number): string => {
-  if (!Number.isFinite(seconds) || seconds < 0) return '00:00';
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-};
 
 export const MainLayout: React.FC = () => {
   const navigate = useNavigate();
@@ -27,22 +18,15 @@ export const MainLayout: React.FC = () => {
     return localStorage.getItem('udo_low_spec') === 'true';
   });
 
-  const [allowKeyboardGamesOnMobile, setAllowKeyboardGamesOnMobile] = useState<boolean>(() => {
-    return localStorage.getItem('udo_bt_controller') === 'true';
-  });
-
   const [sfxEnabled, setSfxEnabled] = useState<boolean>(() => {
     return localStorage.getItem('udo_sfx_enabled') !== 'false';
   });
+
   const [musicEnabled, setMusicEnabled] = useState<boolean>(() => {
     return localStorage.getItem('udo_music_enabled') !== 'false';
   });
-  const [trackIndex, setTrackIndex] = useState<number>(0);
-  const [isMusicPlaying, setIsMusicPlaying] = useState<boolean>(false);
-  const [pausedByGame, setPausedByGame] = useState<boolean>(false);
-  const [currentTime, setCurrentTime] = useState<number>(0);
-  const [duration, setDuration] = useState<number>(0);
 
+  const [pausedByGame, setPausedByGame] = useState<boolean>(false);
   const [isUserPodOpen, setIsUserPodOpen] = useState<boolean>(false);
   const [isChatDrawerOpen, setIsChatDrawerOpen] = useState<boolean>(false);
 
@@ -51,28 +35,16 @@ export const MainLayout: React.FC = () => {
   const userNextLevelXp = 1000;
   const userXpPercent = Math.round((userCurrentXp / userNextLevelXp) * 100);
 
+  // Placeholder temporal del Chat hasta enchufar el componente del Grupo Rojo
   const [chatInput, setChatInput] = useState<string>('');
   const [messages, setMessages] = useState<GeneralChatMessage[]>([
-    { id: 1, sender: 'laura_gamer', text: '¡Las conexiones tipo grafo entre juegos se ven increíbles!', time: '16:10' },
-    { id: 2, sender: 'Ruben_Dev', text: 'Puedes arrastrar los juegos en el modo exploración.', time: '16:12' },
-    { id: 3, sender: 'Nicolas_Lider', text: 'El borde de la barra lateral ahora divide limpio a la derecha.', time: '16:15' },
+    { id: 1, sender: 'laura_gamer', text: 'Bienvenido al chat general de gamesUDONE.', time: '16:10' },
+    { id: 2, sender: 'Ruben_Dev', text: 'Espacio listo para integrar el módulo del Grupo Rojo.', time: '16:12' },
   ]);
-
-  const currentTrack = PLAYLIST_TRACKS[trackIndex % PLAYLIST_TRACKS.length];
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', 'friv2');
-    localStorage.setItem('udo_theme', 'friv2');
-  }, []);
 
   useEffect(() => {
     localStorage.setItem('udo_low_spec', String(lowSpecMode));
   }, [lowSpecMode]);
-
-  useEffect(() => {
-    localStorage.setItem('udo_bt_controller', String(allowKeyboardGamesOnMobile));
-    window.dispatchEvent(new Event('udo_prefs_updated'));
-  }, [allowKeyboardGamesOnMobile]);
 
   useEffect(() => {
     soundManager.setSfxEnabled(sfxEnabled);
@@ -84,6 +56,7 @@ export const MainLayout: React.FC = () => {
     );
   }, [isChatDrawerOpen]);
 
+  // Auto-pausa el tema principal cuando empieza un juego y lo reanuda al cerrar
   useEffect(() => {
     const handleGamePlaying = (e: Event) => {
       const custom = e as CustomEvent<{ playing: boolean }>;
@@ -92,12 +65,8 @@ export const MainLayout: React.FC = () => {
 
       if (gameIsRunning && audioRef.current) {
         audioRef.current.pause();
-        setIsMusicPlaying(false);
       } else if (!gameIsRunning && musicEnabled && audioRef.current) {
-        audioRef.current
-          .play()
-          .then(() => setIsMusicPlaying(true))
-          .catch(() => {});
+        audioRef.current.play().catch(() => {});
       }
     };
 
@@ -105,13 +74,11 @@ export const MainLayout: React.FC = () => {
     return () => window.removeEventListener('udo_game_playing_state', handleGamePlaying);
   }, [musicEnabled]);
 
+  // Desbloquea la reproducción del tema único tras el primer clic del usuario
   useEffect(() => {
     const unlockAudioOnFirstClick = () => {
       if (musicEnabled && !pausedByGame && audioRef.current && audioRef.current.paused) {
-        audioRef.current
-          .play()
-          .then(() => setIsMusicPlaying(true))
-          .catch(() => {});
+        audioRef.current.play().catch(() => {});
       }
       window.removeEventListener('click', unlockAudioOnFirstClick);
     };
@@ -126,67 +93,11 @@ export const MainLayout: React.FC = () => {
       localStorage.setItem('udo_music_enabled', String(next));
       if (!next && audioRef.current) {
         audioRef.current.pause();
-        setIsMusicPlaying(false);
       } else if (next && !pausedByGame && audioRef.current) {
-        audioRef.current
-          .play()
-          .then(() => setIsMusicPlaying(true))
-          .catch(() => {});
+        audioRef.current.play().catch(() => {});
       }
       return next;
     });
-  };
-
-  const handlePlayPauseButton = () => {
-    soundManager.playClick();
-    if (!audioRef.current) return;
-    if (isMusicPlaying) {
-      audioRef.current.pause();
-      setIsMusicPlaying(false);
-    } else {
-      if (!musicEnabled) {
-        setMusicEnabled(true);
-        localStorage.setItem('udo_music_enabled', 'true');
-      }
-      audioRef.current
-        .play()
-        .then(() => setIsMusicPlaying(true))
-        .catch(() => {});
-    }
-  };
-
-  const handleNextTrack = () => {
-    soundManager.playClick();
-    setTrackIndex((prev) => (prev + 1) % PLAYLIST_TRACKS.length);
-    setTimeout(() => {
-      if (musicEnabled && !pausedByGame && audioRef.current) {
-        audioRef.current
-          .play()
-          .then(() => setIsMusicPlaying(true))
-          .catch(() => {});
-      }
-    }, 60);
-  };
-
-  const handlePrevTrack = () => {
-    soundManager.playClick();
-    setTrackIndex((prev) => (prev - 1 + PLAYLIST_TRACKS.length) % PLAYLIST_TRACKS.length);
-    setTimeout(() => {
-      if (musicEnabled && !pausedByGame && audioRef.current) {
-        audioRef.current
-          .play()
-          .then(() => setIsMusicPlaying(true))
-          .catch(() => {});
-      }
-    }, 60);
-  };
-
-  const handleSeekSlider = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = Number(e.target.value);
-    setCurrentTime(val);
-    if (audioRef.current) {
-      audioRef.current.currentTime = val;
-    }
   };
 
   const handleSendChatMessage = (e: React.FormEvent) => {
@@ -211,13 +122,8 @@ export const MainLayout: React.FC = () => {
 
   return (
     <div className={`y2k-app-shell ${lowSpecMode ? 'low-spec-mode' : ''}`}>
-      <audio
-        ref={audioRef}
-        src={currentTrack.url}
-        onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime || 0)}
-        onLoadedMetadata={() => setDuration(audioRef.current?.duration || 0)}
-        onEnded={handleNextTrack}
-      />
+      {/* Tema musical único en bucle */}
+      <audio ref={audioRef} src={MAIN_THEME_URL} loop />
 
       {/* 1. FONDO GLOBAL */}
       <div className="lava-lamp-container" aria-hidden="true">
@@ -237,20 +143,14 @@ export const MainLayout: React.FC = () => {
         <div className="lava-blob blob-2" />
       </div>
 
-      {/* 2. SIDEBAR IZQUIERDA: RELLENO SIN BORDE + LÍNEA DE CONTORNO EXCLUSIVA A LA DERECHA */}
+      {/* 2. SIDEBAR IZQUIERDA (MÓDULOS EXTERNOS DESACOPLADOS) */}
       <aside className="y2k-left-sidebar" aria-label="Navegación Principal">
-        <svg
-          className="sidebar-svg-bg"
-          viewBox="0 0 92 1000"
-          preserveAspectRatio="none"
-        >
-          {/* Relleno del panel sin contorno en arriba, abajo ni izquierda */}
+        <svg className="sidebar-svg-bg" viewBox="0 0 92 1000" preserveAspectRatio="none">
           <path
             d="M 0,0 L 90,0 L 90,104 L 66,142 L 66,858 L 90,896 L 90,1000 L 0,1000 Z"
             fill="var(--panel-base)"
             stroke="none"
           />
-          {/* Contorno coloreado ÚNICAMENTE en el borde derecho y sus diagonales */}
           <path
             d="M 90,0 L 90,104 L 66,142 L 66,858 L 90,896 L 90,1000"
             fill="none"
@@ -286,7 +186,7 @@ export const MainLayout: React.FC = () => {
             onClick={() => soundManager.playClick()}
             onMouseEnter={() => soundManager.playHover()}
             className={({ isActive }) => `sidebar-nav-btn ${isActive ? 'active' : ''}`}
-            title="Juegos"
+            title="Catálogo de Juegos"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3">
               <rect x="3" y="3" width="7" height="7" rx="2" />
@@ -296,31 +196,22 @@ export const MainLayout: React.FC = () => {
             </svg>
           </NavLink>
 
-          <NavLink
-            to="/kaik"
-            onClick={() => soundManager.playClick()}
+          {/* Hooks preparados para los módulos de los demás equipos */}
+          <button
+            type="button"
+            className="sidebar-nav-btn"
             onMouseEnter={() => soundManager.playHover()}
-            className={({ isActive }) => `sidebar-nav-btn ${isActive ? 'active' : ''}`}
-            title="Santuario Kaik"
+            onClick={() => {
+              soundManager.playClick();
+              alert('Módulo externo: Mascota Kaik (pendiente de integración del Grupo Verde)');
+            }}
+            title="Mascota Kaik (Módulo externo)"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3">
               <path d="M12 2C7.5 2 4 7.5 4 13a8 8 0 0 0 16 0c0-5.5-3.5-11-8-11Z" />
               <path d="M9 14s1.5 2 3 2 3-2 3-2" />
             </svg>
-          </NavLink>
-
-          <NavLink
-            to="/avatar"
-            onClick={() => soundManager.playClick()}
-            onMouseEnter={() => soundManager.playHover()}
-            className={({ isActive }) => `sidebar-nav-btn ${isActive ? 'active' : ''}`}
-            title="Estudio de Avatar"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3">
-              <circle cx="12" cy="8" r="4.5" />
-              <path d="M20 21a8 8 0 0 0-16 0" />
-            </svg>
-          </NavLink>
+          </button>
 
           <button
             type="button"
@@ -328,9 +219,25 @@ export const MainLayout: React.FC = () => {
             onMouseEnter={() => soundManager.playHover()}
             onClick={() => {
               soundManager.playClick();
-              alert('Módulo de Foro Comunitario (Grupo Cyan)');
+              alert('Módulo externo: Avatar / Mii (pendiente de integración del Grupo Blanco)');
             }}
-            title="Foro Comunitario"
+            title="Avatar (Módulo externo)"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3">
+              <circle cx="12" cy="8" r="4.5" />
+              <path d="M20 21a8 8 0 0 0-16 0" />
+            </svg>
+          </button>
+
+          <button
+            type="button"
+            className="sidebar-nav-btn"
+            onMouseEnter={() => soundManager.playHover()}
+            onClick={() => {
+              soundManager.playClick();
+              alert('Módulo externo: Foro Comunitario (pendiente de integración del Grupo Cyan)');
+            }}
+            title="Foro Comunitario (Módulo externo)"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3">
               <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
@@ -343,9 +250,9 @@ export const MainLayout: React.FC = () => {
             onMouseEnter={() => soundManager.playHover()}
             onClick={() => {
               soundManager.playClick();
-              alert('Módulo de Tienda, Pase de Batalla y Gacha');
+              alert('Módulo externo: Tienda y Gacha (pendiente de integración)');
             }}
-            title="Tienda y Gacha"
+            title="Tienda y Gacha (Módulo externo)"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3">
               <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
@@ -353,18 +260,6 @@ export const MainLayout: React.FC = () => {
               <path d="M16 10a4 4 0 0 1-8 0" />
             </svg>
           </button>
-
-          <NavLink
-            to="/credits"
-            onClick={() => soundManager.playClick()}
-            onMouseEnter={() => soundManager.playHover()}
-            className={({ isActive }) => `sidebar-nav-btn ${isActive ? 'active' : ''}`}
-            title="Créditos"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-            </svg>
-          </NavLink>
         </nav>
 
         <div className="sidebar-bottom-zone">
@@ -386,7 +281,7 @@ export const MainLayout: React.FC = () => {
         </div>
       </aside>
 
-      {/* POPUP DE CONFIGURACIÓN */}
+      {/* POPUP DE CONFIGURACIÓN SIMPLIFICADO (SIN TEMAS, SIN REPRODUCTOR, SIN TECLADO MÓVIL) */}
       {isUserPodOpen && (
         <div className="tactile-panel sidebar-settings-popover">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
@@ -394,10 +289,9 @@ export const MainLayout: React.FC = () => {
               <div
                 onClick={() => {
                   soundManager.playClick();
-                  setIsUserPodOpen(false);
-                  navigate('/avatar');
+                  alert('Módulo externo: Editor de Avatar (Grupo Blanco)');
                 }}
-                title="Cambiar Avatar"
+                title="Avatar de usuario"
                 style={{
                   width: '44px',
                   height: '44px',
@@ -420,8 +314,8 @@ export const MainLayout: React.FC = () => {
               </div>
 
               <div>
-                <div style={{ fontSize: '1rem', color: 'var(--text-main)' }}>Rayner_UDO</div>
-                <div style={{ fontSize: '0.73rem', color: 'var(--accent-gold)' }}>
+                <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-main)' }}>Rayner_UDO</div>
+                <div style={{ fontSize: '0.76rem', color: 'var(--accent-gold)', fontWeight: 600 }}>
                   Nivel {userLevel} — {userCurrentXp}/{userNextLevelXp} XP
                 </div>
               </div>
@@ -447,81 +341,7 @@ export const MainLayout: React.FC = () => {
             <div className="xp-progress-fill" style={{ width: `${userXpPercent}%` }} />
           </div>
 
-          <div className="music-player-pod">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ overflow: 'hidden' }}>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {currentTrack.title}
-                </div>
-                <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
-                  {pausedByGame ? 'En pausa (Juego en curso)' : currentTrack.artist}
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '5px' }}>
-                <button
-                  type="button"
-                  className="tactile-btn-dark"
-                  style={{ width: '28px', height: '28px', padding: 0 }}
-                  onClick={handlePrevTrack}
-                  title="Anterior pista"
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                    <polygon points="19 20 9 12 19 4 19 20" />
-                    <line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" strokeWidth="3" />
-                  </svg>
-                </button>
-
-                <button
-                  type="button"
-                  className="tactile-btn-purple"
-                  style={{ width: '32px', height: '28px', padding: 0 }}
-                  onClick={handlePlayPauseButton}
-                  title={isMusicPlaying ? 'Pausar música' : 'Reproducir música'}
-                >
-                  {isMusicPlaying ? (
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                      <rect x="6" y="4" width="4" height="16" />
-                      <rect x="14" y="4" width="4" height="16" />
-                    </svg>
-                  ) : (
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                      <polygon points="5 3 19 12 5 21 5 3" />
-                    </svg>
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  className="tactile-btn-dark"
-                  style={{ width: '28px', height: '28px', padding: 0 }}
-                  onClick={handleNextTrack}
-                  title="Siguiente pista"
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                    <polygon points="5 4 15 12 5 20 5 4" />
-                    <line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" strokeWidth="3" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            <input
-              type="range"
-              className="music-range-slider"
-              min={0}
-              max={duration || 100}
-              value={currentTime}
-              onChange={handleSeekSlider}
-            />
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.66rem', color: 'var(--text-soft)' }}>
-              <span>{formatAudioTime(currentTime)}</span>
-              <span>{formatAudioTime(duration)}</span>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div
               className="y2k-toggle-row"
               onClick={handleToggleMusicSwitch}
@@ -565,32 +385,16 @@ export const MainLayout: React.FC = () => {
                 <div className="y2k-switch-thumb" />
               </div>
             </div>
-
-            <div
-              className="y2k-toggle-row"
-              onClick={() => {
-                soundManager.playClick();
-                setAllowKeyboardGamesOnMobile((prev) => !prev);
-              }}
-              role="switch"
-              aria-checked={allowKeyboardGamesOnMobile}
-            >
-              <span>Juegos de Teclado en Móvil</span>
-              <div className={`y2k-switch-pill ${allowKeyboardGamesOnMobile ? 'checked' : ''}`}>
-                <div className="y2k-switch-thumb" />
-              </div>
-            </div>
           </div>
 
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
               type="button"
               className="tactile-btn-dark"
-              style={{ flex: 1, padding: '7px', fontSize: '0.75rem' }}
+              style={{ flex: 1, padding: '8px', fontSize: '0.8rem' }}
               onClick={() => {
                 soundManager.playClick();
-                setIsUserPodOpen(false);
-                navigate('/avatar');
+                alert('Módulo externo: Editor de Avatar (Grupo Blanco)');
               }}
             >
               Editar Avatar
@@ -598,7 +402,7 @@ export const MainLayout: React.FC = () => {
             <button
               type="button"
               className="tactile-btn-dark"
-              style={{ flex: 1, padding: '7px', fontSize: '0.75rem', color: 'var(--accent-crimson)' }}
+              style={{ flex: 1, padding: '8px', fontSize: '0.8rem', color: 'var(--accent-crimson)' }}
               onClick={() => alert('Cerrando sesión...')}
             >
               Salir
@@ -612,7 +416,7 @@ export const MainLayout: React.FC = () => {
         <Outlet />
       </main>
 
-      {/* 4. PANEL DE CHAT HERMANO DERECHO */}
+      {/* 4. PANEL LATERAL DERECHO — SLOT PARA EL CHAT DEL GRUPO ROJO */}
       {!isChatDrawerOpen && (
         <button
           type="button"
@@ -644,7 +448,7 @@ export const MainLayout: React.FC = () => {
             alignItems: 'center',
           }}
         >
-          <strong style={{ fontSize: '0.92rem', color: 'var(--text-main)' }}>CHAT GENERAL</strong>
+          <strong style={{ fontSize: '0.95rem', color: 'var(--text-main)' }}>CHAT GENERAL</strong>
           <button
             type="button"
             className="icon-close-x-btn"
@@ -661,6 +465,7 @@ export const MainLayout: React.FC = () => {
           </button>
         </div>
 
+        {/* SLOT DEL GRUPO ROJO: Reemplazar el contenido inferior por <ChatModule /> */}
         <div
           style={{
             flex: 1,
@@ -680,14 +485,14 @@ export const MainLayout: React.FC = () => {
                 padding: '9px 12px',
                 borderRadius: '10px',
                 borderLeft: '4px solid var(--primary-top)',
-                fontSize: '0.84rem',
+                fontSize: '0.86rem',
               }}
             >
               <div>
                 <strong style={{ color: 'var(--accent-gold)', marginRight: 6 }}>{msg.sender}:</strong>
                 <span>{msg.text}</span>
               </div>
-              <small style={{ color: 'var(--text-dim)', fontSize: '0.68rem' }}>{msg.time}</small>
+              <small style={{ color: 'var(--text-dim)', fontSize: '0.7rem' }}>{msg.time}</small>
             </div>
           ))}
         </div>
@@ -715,10 +520,10 @@ export const MainLayout: React.FC = () => {
               padding: '8px 10px',
               color: 'var(--text-main)',
               outline: 'none',
-              fontSize: '0.84rem',
+              fontSize: '0.86rem',
             }}
           />
-          <button type="submit" className="tactile-btn-purple" style={{ padding: '0 14px', fontSize: '0.82rem' }}>
+          <button type="submit" className="tactile-btn-purple" style={{ padding: '0 14px', fontSize: '0.84rem' }}>
             Enviar
           </button>
         </form>

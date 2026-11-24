@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { type Game, DEFAULT_LEADERBOARD } from '../data/gamesData';
-import { RufflePlayer } from './RufflePlayer';
+import { type Game, DEFAULT_LEADERBOARD, slugifyGameAlias } from '../data/gamesData';
+import { RufflePlayer, killGlobalRuffleInstance } from './RufflePlayer';
 import { soundManager } from '../data/audioConfig';
 
 interface GameViewerStageProps {
@@ -10,6 +10,7 @@ interface GameViewerStageProps {
   isExplorationMode?: boolean;
   isCameraPinned?: boolean;
   onTogglePinCamera?: () => void;
+  onAutoPinOnPlay?: () => void;
   onToggleFavorite: (gameId: number) => void;
   onVote: (gameId: number, type: 'LIKE' | 'DISLIKE') => void;
   onClose: () => void;
@@ -23,6 +24,7 @@ export const GameViewerStage: React.FC<GameViewerStageProps> = ({
   isExplorationMode = false,
   isCameraPinned = false,
   onTogglePinCamera,
+  onAutoPinOnPlay,
   onToggleFavorite,
   onVote,
   onClose,
@@ -32,38 +34,72 @@ export const GameViewerStage: React.FC<GameViewerStageProps> = ({
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [playSessionId, setPlaySessionId] = useState<number>(0);
   const [isRankedOpen, setIsRankedOpen] = useState<boolean>(false);
+  const [show3dsClosePrompt, setShow3dsClosePrompt] = useState<boolean>(false);
+  const [copiedLink, setCopiedLink] = useState<boolean>(false);
   const [showPinFirstTimeHint, setShowPinFirstTimeHint] = useState<boolean>(() => {
     return localStorage.getItem('udo_pin_hint_seen') !== 'true';
   });
 
-  const notifyMusicPause = (playing: boolean) => {
+  const resolvedAlias = game.alias || slugifyGameAlias(game.title, game.id);
+  const shareUrl = `${window.location.origin}/juego/${resolvedAlias}`;
+
+  const emitPlayingState = useCallback((playing: boolean) => {
     window.dispatchEvent(
       new CustomEvent('udo_game_playing_state', { detail: { playing } })
     );
-  };
+  }, []);
 
-  // Limpieza total al cerrar para evitar fugas de memoria o audio fantasma
-  const handleHardClose = useCallback(() => {
-    soundManager.playClose();
+  const teardownRunningGame = useCallback(() => {
+    killGlobalRuffleInstance();
     if (iframeRef.current) {
-      iframeRef.current.src = 'about:blank';
+      try {
+        iframeRef.current.src = 'about:blank';
+      } catch {
+        // ignora si ya fue desmontado
+      }
     }
+  }, []);
+
+  const executeImmediateClose = useCallback(() => {
+    soundManager.playClose();
+    setShow3dsClosePrompt(false);
+    teardownRunningGame();
     setIsPlaying(false);
+    setIsRankedOpen(false);
     onPlayingChange?.(false);
-    notifyMusicPause(false);
+    emitPlayingState(false);
+
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
+
     onClose();
-  }, [onClose, onPlayingChange]);
+  }, [emitPlayingState, onClose, onPlayingChange, teardownRunningGame]);
+
+  const requestCloseViewer = useCallback(() => {
+    if (isPlaying) {
+      soundManager.playClick();
+      setShow3dsClosePrompt(true);
+      return;
+    }
+    executeImmediateClose();
+  }, [executeImmediateClose, isPlaying]);
 
   useEffect(() => {
     setIsPlaying(false);
     setIsRankedOpen(false);
+    setShow3dsClosePrompt(false);
+    setCopiedLink(false);
     onPlayingChange?.(false);
-    notifyMusicPause(false);
+    emitPlayingState(false);
+
     return () => {
-      notifyMusicPause(false);
+      teardownRunningGame();
+      emitPlayingState(false);
     };
-  }, [game.id]);
+  }, [game.id, emitPlayingState, onPlayingChange, teardownRunningGame]);
 
   const toggleFullscreen = useCallback(() => {
     if (!containerRef.current) return;
@@ -75,34 +111,75 @@ export const GameViewerStage: React.FC<GameViewerStageProps> = ({
     }
   }, []);
 
-  // Atajos globales: SOLO Alt+Enter para Pantalla Completa, ESC para cerrar el juego de verdad
+  const handleCopyShareLink = useCallback(() => {
+    soundManager.playClick();
+
+    const markCopied = () => {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 1800);
+    };
+
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      navigator.clipboard
+        .writeText(shareUrl)
+        .then(markCopied)
+        .catch(() => {
+          window.prompt('Copia el enlace del juego:', shareUrl);
+        });
+    } else {
+      window.prompt('Copia el enlace del juego:', shareUrl);
+    }
+  }, [shareUrl]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+        return;
+      }
 
       if (e.altKey && e.key === 'Enter') {
         e.preventDefault();
         toggleFullscreen();
       } else if (e.key === 'Escape') {
-        if (document.fullscreenElement) {
-          document.exitFullscreen().catch(() => {});
-        } else {
-          e.preventDefault();
-          handleHardClose();
+        e.preventDefault();
+        e.stopPropagation();
+        if (show3dsClosePrompt) {
+          setShow3dsClosePrompt(false);
+          return;
         }
+        requestCloseViewer();
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleHardClose, toggleFullscreen]);
 
-  const handleStart = () => {
+    const handleFrameMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'UDO_GAME_CLOSE') {
+        requestCloseViewer();
+      } else if (event.data?.type === 'UDO_GAME_FULLSCREEN') {
+        toggleFullscreen();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown, true);
+    window.addEventListener('message', handleFrameMessage);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, true);
+      window.removeEventListener('message', handleFrameMessage);
+    };
+  }, [requestCloseViewer, show3dsClosePrompt, toggleFullscreen]);
+
+  const handleStartGame = () => {
+    (document.activeElement as HTMLElement | null)?.blur?.();
     soundManager.playOpen();
+    setShow3dsClosePrompt(false);
+    setPlaySessionId((prev) => prev + 1);
     setIsPlaying(true);
     onPlayingChange?.(true);
-    // Pausa la música de la plataforma en cuanto empieza a correr el juego
-    notifyMusicPause(true);
+    emitPlayingState(true);
+
+    if (isExplorationMode) {
+      onAutoPinOnPlay?.();
+    }
   };
 
   const handlePinClick = () => {
@@ -120,14 +197,122 @@ export const GameViewerStage: React.FC<GameViewerStageProps> = ({
   return (
     <div
       ref={containerRef}
-      className="game-bevel-card gameviewer-shell"
+      className={`game-bevel-card gameviewer-shell ${
+        isPlaying ? 'is-playing-expanded' : ''
+      } ${isFavorite ? 'is-favorite-card' : ''}`}
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
+      {show3dsClosePrompt && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 120,
+            background: 'rgba(8, 4, 18, 0.78)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '18px',
+          }}
+        >
+          <div
+            className="tactile-panel"
+            style={{
+              maxWidth: '410px',
+              width: '100%',
+              padding: '22px 24px',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px',
+              animation: 'jellyPop 0.24s var(--ease-squish) forwards',
+            }}
+          >
+            <span className="credit-role-badge" style={{ alignSelf: 'center' }}>
+              SALIR DEL SOFTWARE
+            </span>
+            <h3 style={{ fontSize: '1.25rem', color: 'var(--text-main)' }}>
+              Cerrar {game.title}
+            </h3>
+            <p style={{ fontSize: '0.86rem', color: 'var(--text-soft)', lineHeight: 1.4 }}>
+              Se cerrara la partida actual y se liberara su audio. Los datos no guardados se perderan.
+            </p>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '4px' }}>
+              <button
+                type="button"
+                className="tactile-btn-purple"
+                style={{ padding: '10px 22px', fontSize: '0.86rem' }}
+                onClick={executeImmediateClose}
+              >
+                Cerrar
+              </button>
+              <button
+                type="button"
+                className="tactile-btn-dark"
+                style={{ padding: '10px 22px', fontSize: '0.86rem' }}
+                onClick={() => {
+                  soundManager.playClick();
+                  setShow3dsClosePrompt(false);
+                }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {copiedLink && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 115,
+            background: 'rgba(8, 4, 18, 0.52)',
+            backdropFilter: 'blur(3px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            pointerEvents: 'none',
+          }}
+        >
+          <div
+            className="tactile-panel"
+            style={{
+              padding: '16px 24px',
+              textAlign: 'center',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              borderColor: 'var(--accent-gold)',
+              animation: 'jellyPop 0.22s var(--ease-squish) forwards',
+            }}
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="var(--accent-gold)"
+              strokeWidth="2.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-main)' }}>
+              Link copiado!
+            </span>
+          </div>
+        </div>
+      )}
+
       <div className="gameviewer-body-split">
         <div className="gameviewer-left-stage">
           {!isPlaying ? (
-            /* PANTALLA DE INFORMACIÓN PREVIA (TEXTO BLANCO GARANTIZADO SOBRE FONDO OSCURO DE PORTADA) */
             <div
               style={{
                 flex: 1,
@@ -210,7 +395,7 @@ export const GameViewerStage: React.FC<GameViewerStageProps> = ({
                   type="button"
                   className="tactile-btn-purple"
                   style={{ padding: '11px 30px', fontSize: '0.98rem' }}
-                  onClick={handleStart}
+                  onClick={handleStartGame}
                 >
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
                     <polygon points="5 3 19 12 5 21 5 3" />
@@ -220,25 +405,38 @@ export const GameViewerStage: React.FC<GameViewerStageProps> = ({
               </div>
             </div>
           ) : (
-            /* JUEGO ACTIVO: SE DESTRUYE AL 100% CUANDO isPlaying PASA A FALSE O SE DESMONTA */
-            <div style={{ flex: 1, width: '100%', background: '#000', position: 'relative' }}>
+            <div
+              key={`${game.id}-${playSessionId}`}
+              style={{
+                flex: 1,
+                width: '100%',
+                height: '100%',
+                minHeight: '320px',
+                backgroundColor: '#000000',
+                position: 'relative',
+              }}
+            >
               {isFlashSwf ? (
                 <RufflePlayer swfUrl={activeUrl} />
               ) : (
                 <iframe
                   ref={iframeRef}
+                  data-game-runtime="true"
                   src={activeUrl}
                   title={game.title}
-                  width="100%"
-                  height="100%"
-                  style={{ border: 'none' }}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    border: 'none',
+                    display: 'block',
+                  }}
                   allowFullScreen
                 />
               )}
             </div>
           )}
 
-          {/* BARRA DE ACCIONES INFERIOR */}
+          {/* BARRA DE ACCIONES EN UNA SOLA LINEA */}
           <div
             style={{
               padding: '8px 14px',
@@ -247,15 +445,15 @@ export const GameViewerStage: React.FC<GameViewerStageProps> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              flexWrap: 'wrap',
+              flexWrap: 'nowrap',
               gap: '8px',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
               <button
                 type="button"
                 className={`tactile-btn-dark ${userVote === 'LIKE' ? 'active-state' : ''}`}
-                style={{ padding: '6px 11px', fontSize: '0.76rem' }}
+                style={{ padding: '6px 10px', fontSize: '0.75rem' }}
                 onClick={() => {
                   soundManager.playClick();
                   onVote(game.id, 'LIKE');
@@ -271,7 +469,7 @@ export const GameViewerStage: React.FC<GameViewerStageProps> = ({
               <button
                 type="button"
                 className={`tactile-btn-dark ${userVote === 'DISLIKE' ? 'active-state' : ''}`}
-                style={{ padding: '6px 11px', fontSize: '0.76rem' }}
+                style={{ padding: '6px 10px', fontSize: '0.75rem' }}
                 onClick={() => {
                   soundManager.playClick();
                   onVote(game.id, 'DISLIKE');
@@ -287,24 +485,41 @@ export const GameViewerStage: React.FC<GameViewerStageProps> = ({
               <button
                 type="button"
                 className={`tactile-btn-dark ${isFavorite ? 'active-state' : ''}`}
-                style={{ padding: '6px 11px', fontSize: '0.76rem' }}
+                style={{ width: '34px', height: '32px', padding: 0 }}
                 onClick={() => {
                   soundManager.playClick();
                   onToggleFavorite(game.id);
                 }}
+                title={isFavorite ? 'Quitar de favoritos' : 'Guardar en favoritos'}
+                aria-label={isFavorite ? 'Quitar de favoritos' : 'Guardar en favoritos'}
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill={isFavorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.3">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill={isFavorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.3">
                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                 </svg>
-                <span>{isFavorite ? 'Favorito' : 'Guardar'}</span>
+              </button>
+
+              <button
+                type="button"
+                className={`tactile-btn-dark ${copiedLink ? 'active-state' : ''}`}
+                style={{ width: '34px', height: '32px', padding: 0 }}
+                onClick={handleCopyShareLink}
+                title={copiedLink ? 'Enlace copiado' : `Copiar enlace (${shareUrl})`}
+                aria-label="Compartir juego"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="18" cy="5" r="3" />
+                  <circle cx="6" cy="12" r="3" />
+                  <circle cx="18" cy="19" r="3" />
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+                </svg>
               </button>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '7px', position: 'relative' }}>
-              {/* BOTÓN "FIJAR" EXCLUSIVO DEL MODO EXPLORACIÓN + POPUP DE PRIMERA VEZ */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', position: 'relative', flexShrink: 0 }}>
               {isExplorationMode && (
                 <div style={{ position: 'relative' }}>
-                  {showPinFirstTimeHint && (
+                  {showPinFirstTimeHint && !isCameraPinned && (
                     <div
                       style={{
                         position: 'absolute',
@@ -329,15 +544,15 @@ export const GameViewerStage: React.FC<GameViewerStageProps> = ({
                   <button
                     type="button"
                     className={`tactile-btn-dark ${isCameraPinned ? 'active-state' : ''}`}
-                    style={{ padding: '6px 11px', fontSize: '0.76rem' }}
+                    style={{ width: '34px', height: '32px', padding: 0 }}
                     onClick={handlePinClick}
-                    title="Fijar cámara para no mover el mapa por accidente"
+                    title={isCameraPinned ? 'Desfijar camara' : 'Fijar camara para no mover el mapa'}
+                    aria-label="Fijar camara"
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill={isCameraPinned ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.3">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill={isCameraPinned ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.3">
                       <line x1="12" y1="17" x2="12" y2="22" />
                       <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" />
                     </svg>
-                    <span>{isCameraPinned ? 'Fijado' : 'Fijar'}</span>
                   </button>
                 </div>
               )}
@@ -346,43 +561,45 @@ export const GameViewerStage: React.FC<GameViewerStageProps> = ({
                 <button
                   type="button"
                   className={`tactile-btn-dark ${isRankedOpen ? 'active-state' : ''}`}
-                  style={{ padding: '6px 12px', fontSize: '0.76rem' }}
+                  style={{ width: '34px', height: '32px', padding: 0 }}
                   onClick={() => {
                     soundManager.playClick();
                     setIsRankedOpen((prev) => !prev);
                   }}
+                  title="Clasificacion Ranked"
+                  aria-label="Ranked"
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3">
                     <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
                     <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
                     <path d="M4 22h16" />
                     <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
                   </svg>
-                  <span>Ranked</span>
                 </button>
               )}
 
               <button
                 type="button"
                 className="tactile-btn-purple"
-                style={{ padding: '6px 12px', fontSize: '0.76rem' }}
+                style={{ width: '34px', height: '32px', padding: 0 }}
                 onClick={toggleFullscreen}
-                title="Pantalla Completa (Atajo: Alt + Enter)"
+                title="Pantalla Completa (Alt + Enter)"
+                aria-label="Pantalla Completa"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
                   <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
                 </svg>
-                <span>Pantalla Completa (Alt+Enter)</span>
               </button>
 
-              {/* Botón de Cerrar con símbolo X SVG */}
               <button
                 type="button"
                 className="icon-close-x-btn"
-                onClick={handleHardClose}
+                style={{ width: '32px', height: '32px' }}
+                onClick={requestCloseViewer}
                 title="Cerrar Juego (ESC)"
+                aria-label="Cerrar Juego"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round">
                   <line x1="18" y1="6" x2="6" y2="18" />
                   <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
@@ -391,7 +608,6 @@ export const GameViewerStage: React.FC<GameViewerStageProps> = ({
           </div>
         </div>
 
-        {/* PANEL RANKED LATERAL QUE EMPUJA DE DERECHA A IZQUIERDA */}
         <aside className={`gameviewer-ranked-push-drawer ${isRankedOpen ? 'open' : ''}`}>
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>

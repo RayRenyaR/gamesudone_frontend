@@ -1,46 +1,18 @@
 // ============================================================================
-// CONFIGURACIÓN DE MÚSICA Y SONIDOS DE INTERFAZ (EDITABLE)
-// Coloca tus archivos en public/assets/music/ y cambia las URLs aquí:
+// CONFIGURACIÓN DE AUDIO DE GAMESUDONE (TEMA ÚNICO + SFX)
+// Coloca tu canción en public/assets/music/tema-principal.mp3 y actualiza la ruta:
 // ============================================================================
 
-export interface MusicTrack {
-  id: string;
-  title: string;
-  artist: string;
-  url: string;
-}
-
-export const PLAYLIST_TRACKS: MusicTrack[] = [
-  {
-    id: 'track-1',
-    title: 'Cyber Plaza Y2K',
-    artist: 'gamesUDONE OST',
-    // Puedes reemplazar por '/assets/music/tu_cancion_1.mp3'
-    url: 'https://commondatastorage.googleapis.com/codeskulptor-demos/DDR_assets/Kangaroo_MusiQue_-_The_Neverwritten_Role_Playing_Game.mp3',
-  },
-  {
-    id: 'track-2',
-    title: 'Neon Channel Menu',
-    artist: 'Console Dreams',
-    // Puedes reemplazar por '/assets/music/tu_cancion_2.mp3'
-    url: 'https://commondatastorage.googleapis.com/codeskulptor-assets/Epoq-Lepidoptera.ogg',
-  },
-  {
-    id: 'track-3',
-    title: 'StarlightLobby 2004',
-    artist: 'Retro Wave UDO',
-    // Puedes reemplazar por '/assets/music/tu_cancion_3.mp3'
-    url: 'https://commondatastorage.googleapis.com/codeskulptor-demos/pyman_assets/ateapill.ogg',
-  },
-];
+export const MAIN_THEME_URL =
+  'https://commondatastorage.googleapis.com/codeskulptor-demos/DDR_assets/Kangaroo_MusiQue_-_The_Neverwritten_Role_Playing_Game.mp3';
 
 // Si deseas usar archivos .mp3/.wav propios para la interfaz, coloca la ruta aquí.
-// Si se deja vacío (''), usa el sintetizador retro integrado sin requerir descargas.
+// Si se deja vacío (''), usa el sintetizador retro integrado.
 export const CUSTOM_SFX_URLS = {
-  click: './assets/sfx/click.wav', // ej: '/assets/sfx/click.mp3'
-  hover: './assets/sfx/hover.wav', // ej: '/assets/sfx/hover.mp3'
-  open: './assets/sfx/open.wav',  // ej: '/assets/sfx/open.mp3'
-  close: './assets/sfx/close.wav', // ej: '/assets/sfx/close.mp3'
+  click: '',
+  hover: '',
+  open: '',
+  close: '',
 };
 
 class SoundController {
@@ -51,7 +23,8 @@ class SoundController {
     if (!this.sfxEnabled) return null;
     if (!this.audioCtx && typeof window !== 'undefined') {
       const AudioContextClass =
-        window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (AudioContextClass) {
         this.audioCtx = new AudioContextClass();
       }
@@ -67,7 +40,13 @@ class SoundController {
     localStorage.setItem('udo_sfx_enabled', String(enabled));
   }
 
-  private playTone(freq: number, endFreq: number, duration: number, type: OscillatorType = 'sine', gainVal = 0.08) {
+  private playTone(
+    freq: number,
+    endFreq: number,
+    duration: number,
+    type: OscillatorType = 'sine',
+    gainVal = 0.08
+  ) {
     const ctx = this.getContext();
     if (!ctx) return;
 
@@ -86,7 +65,7 @@ class SoundController {
       osc.start();
       osc.stop(ctx.currentTime + duration);
     } catch {
-      // Ignorar si el navegador bloquea autoplay antes del primer clic
+      // Ignorar bloqueo de autoplay antes del primer clic
     }
   }
 

@@ -76,7 +76,7 @@ export const FALLBACK_GAMES: Game[] = [
     ageBadgeColor: '#5a189a',
     coverUrl: 'https://placehold.co/800x450/1d1430/e5a93c?text=Chess+College+UDO',
     previewGifUrl: 'https://media.giphy.com/media/3o7TKtnuHOHHUjR38Y/giphy.gif',
-    gameUrl: 'https://chesscollege.onrender.com/',
+    gameUrl: 'https://chesscollege.onrender.com/?embedded=true',
     tipo: 'WEB',
     isRecommended: true,
     hasRanked: true,
@@ -334,6 +334,18 @@ const BENTO_PATTERN: BentoSize[] = [
   'wide',
 ];
 
+export function slugifyGameAlias(rawText: string, fallbackId?: number): string {
+  const cleaned = rawText
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  if (cleaned.length > 0) return cleaned;
+  return fallbackId !== undefined ? `juego-${fallbackId}` : 'juego';
+}
+
 export async function fetchCatalogGames(): Promise<Game[]> {
   try {
     const response = await fetch(`${API_BASE_URL}/games`);
@@ -373,7 +385,7 @@ export async function fetchCatalogGames(): Promise<Game[]> {
           previewGifUrl: String(
             g.previewUrl || fallbackMatch.previewGifUrl || ''
           ),
-          gameUrl: isChess ? 'https://chesscollege.onrender.com/' : rawRoute,
+          gameUrl: isChess ? 'https://chesscollege.onrender.com/?embedded=true' : rawRoute,
           descargaUrl: g.descargaUrl ? String(g.descargaUrl) : null,
           tipo: isSwf ? 'FLASH' : ((g.tipo as 'WEB' | 'DESCARGABLE') || 'WEB'),
           isRecommended: Boolean(g.isFeatured ?? true),

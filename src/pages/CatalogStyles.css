@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Righteous&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Righteous&display=swap');
 
 /* ==========================================================================
    1. TEMA PREDETERMINADO Y2K RETROFUTURISTA (FRIV)
@@ -47,7 +47,19 @@
    2. VARIABLES ESTRUCTURALES Y ESCALA UNIFICADA
    ========================================================================== */
 :root {
-  --font-display: 'Righteous', 'Segoe UI', system-ui, sans-serif;
+  --font-main: 'Fredoka', 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Righteous', 'Fredoka', sans-serif;
+}
+
+html, body, #root, button, input, select, textarea {
+  font-family: var(--font-main);
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+}
+
+:root {
   --y2k-glass-blur: blur(12px);
   --border-thick: 3px;
 
@@ -599,7 +611,7 @@ button, input, select, textarea {
    ========================================================================== */
 .game-bevel-card {
   position: relative;
-  cursor: grab;
+  cursor: pointer;
   background: var(--panel-card-bg);
   border: var(--border-thick) solid var(--panel-border-outer);
   border-radius: 16px 2px 16px 2px;
@@ -611,9 +623,7 @@ button, input, select, textarea {
     filter 0.2s ease;
 }
 
-.game-bevel-card:active {
-  cursor: grabbing;
-}
+
 
 .game-card-inner-clip {
   position: relative;
@@ -1349,6 +1359,78 @@ button, input, select, textarea {
     width: 92vw;
     height: 76vh;
   }
+}
 
+/* ==========================================================================
+   VENTANA SUPERIOR IZQUIERDA "FAVORITOS" (ANIMACIÓN DE IZQUIERDA A DERECHA)
+   ========================================================================== */
+.favorites-active-banner {
+  position: fixed;
+  top: 16px;
+  left: calc(var(--left-sidebar-wide) + 18px);
+  z-index: 65;
+  padding: 9px 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--accent-gold);
+  border-color: var(--accent-gold);
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  letter-spacing: 1px;
+  cursor: pointer;
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.55),
+    0 0 14px rgba(255, 209, 102, 0.35);
+  animation: favSlideInLeft 0.36s var(--ease-squish) forwards;
+}
 
+.favorites-active-banner:hover {
+  filter: brightness(1.1);
+}
+
+@keyframes favSlideInLeft {
+  0% {
+    opacity: 0;
+    transform: translateX(-48px) scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+/* ==========================================================================
+   BORDES DORADOS PARA JUEGOS MARCADOS COMO FAVORITOS
+   ========================================================================== */
+.game-bevel-card.is-favorite-card {
+  border-color: var(--accent-gold);
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.55),
+    0 0 16px rgba(255, 209, 102, 0.35),
+    inset 0 2px 3px rgba(255, 240, 180, 0.4);
+}
+
+.game-bevel-card.is-favorite-card::before,
+.game-bevel-card.is-favorite-card::after {
+  border-color: #fff3b0;
+}
+
+.wiiu-channel-tile.is-favorite-card {
+  border-color: var(--accent-gold);
+  box-shadow:
+    0 12px 24px rgba(0, 0, 0, 0.45),
+    0 0 18px rgba(255, 209, 102, 0.42),
+    inset 0 3px 6px rgba(255, 245, 200, 0.85);
+}
+
+.gameviewer-shell {
+  transition:
+    width 0.38s var(--ease-smooth-push),
+    max-height 0.38s var(--ease-smooth-push);
+}
+
+.gameviewer-shell.is-playing-expanded {
+  width: clamp(660px, 78vw, 1020px);
+  max-height: 85vh;
 }

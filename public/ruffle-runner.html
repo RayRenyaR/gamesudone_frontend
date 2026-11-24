@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ruffle Runner</title>
+    <style>
+      html,
+      body,
+      #ruffle-mount {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #090414;
+        color: #f8f5ff;
+        font-family: system-ui, sans-serif;
+      }
+
+      .runner-status {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 16px;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="ruffle-mount">
+      <div class="runner-status" id="status-box">Cargando emulador Flash...</div>
+    </div>
+
+    <script>
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        var swfParam = params.get('swf');
+        var mountEl = document.getElementById('ruffle-mount');
+        var statusBox = document.getElementById('status-box');
+        var currentPlayer = null;
+
+        // reenvia atajos del teclado hacia la pagina principal
+        window.addEventListener('keydown', function (event) {
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            window.parent.postMessage({ type: 'UDO_GAME_CLOSE' }, '*');
+          } else if (event.altKey && event.key === 'Enter') {
+            event.preventDefault();
+            window.parent.postMessage({ type: 'UDO_GAME_FULLSCREEN' }, '*');
+          }
+        });
+
+        // detiene y destruye el reproductor en cuanto el iframe se descarga
+        function disposePlayer() {
+          if (!currentPlayer) return;
+          try {
+            currentPlayer.volume = 0;
+          } catch (e) {}
+          try {
+            if (typeof currentPlayer.pause === 'function') {
+              currentPlayer.pause();
+            }
+          } catch (e) {}
+          try {
+            currentPlayer.remove();
+          } catch (e) {}
+          currentPlayer = null;
+        }
+
+        window.addEventListener('pagehide', disposePlayer);
+        window.addEventListener('beforeunload', disposePlayer);
+
+        function showError(msg) {
+          if (mountEl) {
+            mountEl.innerHTML = '<div class="runner-status">' + msg + '</div>';
+          }
+        }
+
+        if (!swfParam) {
+          showError('No se recibio la ruta del archivo .swf.');
+          return;
+        }
+
+        function mountPlayer() {
+          if (!window.RufflePlayer || !window.RufflePlayer.newest) return false;
+          disposePlayer();
+
+          var api = window.RufflePlayer.newest();
+          var player = api.createPlayer();
+          player.style.width = '100%';
+          player.style.height = '100%';
+          player.style.display = 'block';
+
+          mountEl.innerHTML = '';
+          mountEl.appendChild(player);
+          currentPlayer = player;
+
+          var resolvedUrl = new URL(swfParam, window.location.origin).href;
+          var loadResult = player.load(resolvedUrl);
+          if (loadResult && typeof loadResult.catch === 'function') {
+            loadResult.catch(function () {
+              showError('No se pudo cargar el archivo SWF: ' + swfParam);
+            });
+          }
+          return true;
+        }
+
+        function loadScriptWithFallback(urls, idx) {
+          if (idx >= urls.length) {
+            showError('No se pudo cargar el motor Ruffle desde la red.');
+            return;
+          }
+          var s = document.createElement('script');
+          s.src = urls[idx];
+          s.async = true;
+          s.onload = function () {
+            var tries = 0;
+            var timer = setInterval(function () {
+              tries += 1;
+              if (mountPlayer()) {
+                clearInterval(timer);
+              } else if (tries >= 30) {
+                clearInterval(timer);
+                showError('Ruffle no inicializo a tiempo.');
+              }
+            }, 100);
+          };
+          s.onerror = function () {
+            loadScriptWithFallback(urls, idx + 1);
+          };
+          document.body.appendChild(s);
+        }
+
+        if (statusBox) {
+          statusBox.textContent = 'Iniciando Ruffle para: ' + swfParam;
+        }
+
+        loadScriptWithFallback(
+          [
+            'https://unpkg.com/@ruffle-rs/ruffle',
+            'https://cdn.jsdelivr.net/npm/@ruffle-rs/ruffle@0.1.0-nightly.2024.11.1/dist/ruffle.js',
+          ],
+          0
+        );
+      })();
+    </script>
+  </body>
+</html>

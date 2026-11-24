@@ -4,90 +4,54 @@ interface RufflePlayerProps {
   swfUrl: string;
 }
 
-type RuffleElement = HTMLElement & {
-  load: (url: string) => void;
-  pause?: () => void;
-  remove: () => void;
-  style: CSSStyleDeclaration;
-};
+// navega cualquier iframe activo de juego a about:blank para destruir su contexto
+export function killGlobalRuffleInstance(): void {
+  if (typeof document === 'undefined') return;
 
-declare global {
-  interface Window {
-    RufflePlayer?: {
-      newest: () => {
-        createPlayer: () => RuffleElement;
-      };
-    };
-  }
+  document.querySelectorAll('iframe[data-game-runtime="true"]').forEach((node) => {
+    const frame = node as HTMLIFrameElement;
+    try {
+      frame.src = 'about:blank';
+    } catch {
+      // ignora si el nodo ya fue retirado
+    }
+  });
 }
 
 export const RufflePlayer: React.FC<RufflePlayerProps> = ({ swfUrl }) => {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const activePlayerRef = useRef<RuffleElement | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const runnerSrc = `/ruffle-runner.html?swf=${encodeURIComponent(swfUrl)}`;
 
   useEffect(() => {
-    let isMounted = true;
+    const frame = iframeRef.current;
+    if (!frame) return;
 
-    const destroyCurrentPlayer = () => {
-      if (activePlayerRef.current) {
-        try {
-          activePlayerRef.current.pause?.();
-          activePlayerRef.current.remove();
-        } catch {
-          // Ignorar errores al limpiar nodo
-        }
-        activePlayerRef.current = null;
-      }
-      if (containerRef.current) {
-        containerRef.current.innerHTML = '';
-      }
-    };
-
-    const mountRuffle = () => {
-      if (!isMounted || !containerRef.current || !window.RufflePlayer) return;
-      destroyCurrentPlayer();
-      const ruffle = window.RufflePlayer.newest();
-      const player = ruffle.createPlayer();
-      player.style.width = '100%';
-      player.style.height = '100%';
-      containerRef.current.appendChild(player);
-      activePlayerRef.current = player;
-      player.load(swfUrl);
-    };
-
-    if (window.RufflePlayer) {
-      mountRuffle();
-    } else {
-      const existingScript = document.querySelector('script[data-ruffle-sdk]');
-      if (!existingScript) {
-        const script = document.createElement('script');
-        script.src = 'https://unpkg.com/@ruffle-rs/ruffle';
-        script.async = true;
-        script.setAttribute('data-ruffle-sdk', 'true');
-        script.onload = mountRuffle;
-        document.body.appendChild(script);
-      } else {
-        existingScript.addEventListener('load', mountRuffle);
-      }
-    }
+    // asigna la ruta en el efecto para soportar el doble ciclo de react strictmode
+    frame.src = runnerSrc;
 
     return () => {
-      isMounted = false;
-      destroyCurrentPlayer();
+      try {
+        frame.src = 'about:blank';
+      } catch {
+        // ignora errores al limpiar
+      }
     };
-  }, [swfUrl]);
+  }, [runnerSrc]);
 
   return (
-    <div
-      ref={containerRef}
+    <iframe
+      ref={iframeRef}
+      data-ruffle-runner="true"
+      data-game-runtime="true"
+      title="Emulador Flash Ruffle"
       style={{
         width: '100%',
         height: '100%',
-        background: '#000',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        border: 'none',
+        display: 'block',
+        backgroundColor: '#000000',
       }}
+      allowFullScreen
     />
   );
 };
