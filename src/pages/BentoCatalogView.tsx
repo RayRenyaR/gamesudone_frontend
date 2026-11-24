@@ -9,24 +9,9 @@ import { soundManager } from '../data/audioConfig';
 import { RecommendedBubblesTray } from '../components/RecommendedBubblesTray';
 import { CatalogCardBadge } from '../components/CatalogCardBadge';
 import { resolveRecommendedGames } from '../data/recommendationsEngine';
+import { CATALOG_AD_SLOTS, type CatalogAdSlot } from '../data/adSlotsData';
 
 type ViewMode = 'exploration' | 'bento' | 'wii-u';
-
-const BASE_SCATTER_COORDS: Array<{ x: number; y: number }> = [
-  { x: 110, y: 95 },
-  { x: 470, y: 80 },
-  { x: 850, y: 115 },
-  { x: 1230, y: 90 },
-  { x: 1620, y: 145 },
-  { x: 260, y: 375 },
-  { x: 680, y: 390 },
-  { x: 1090, y: 365 },
-  { x: 1500, y: 420 },
-  { x: 140, y: 685 },
-  { x: 580, y: 705 },
-  { x: 1020, y: 675 },
-  { x: 1460, y: 725 },
-];
 
 const CARD_WIDTH = 245;
 const CARD_HEIGHT = 160;
@@ -34,6 +19,154 @@ const MIN_ZOOM = 0.45;
 const MAX_ZOOM = 1.4;
 const ZOOM_STEP = 0.15;
 const FOUR_GAMES_ROW_SPAN = 1560;
+
+type CatalogGridItem =
+  | { kind: 'game'; data: Game }
+  | { kind: 'ad'; data: CatalogAdSlot };
+
+interface GraphNodeInput {
+  key: string;
+  width: number;
+  height: number;
+}
+
+interface GraphNodePos {
+  x: number;
+  y: number;
+  delay: string;
+}
+
+// generador pseudoaleatorio liviano para repartir anuncios al azar sin saltos al hacer hover
+const createSeededRandom = (seed: number) => {
+  let state = (seed >>> 0) || 1;
+  return () => {
+    state = (state * 1664525 + 1013904223) >>> 0;
+    return state / 4294967296;
+  };
+};
+
+// intercala anuncios en posiciones aleatorias intentando no dejar dos pegados
+const buildRandomInterleavedList = (
+  gamesList: Game[],
+  adsList: CatalogAdSlot[],
+  seed: number
+): CatalogGridItem[] => {
+  const items: CatalogGridItem[] = gamesList.map((data) => ({ kind: 'game', data }));
+  if (adsList.length === 0) return items;
+
+  const rand = createSeededRandom(seed);
+  const shuffledAds = [...adsList].sort(() => rand() - 0.5);
+
+  shuffledAds.forEach((ad) => {
+    const minPos = items.length > 2 ? 1 : 0;
+    let insertAt = minPos + Math.floor(rand() * (items.length - minPos + 1));
+
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      const prevIsAd = insertAt > 0 && items[insertAt - 1]?.kind === 'ad';
+      const nextIsAd = items[insertAt]?.kind === 'ad';
+      if (!prevIsAd && !nextIsAd) break;
+      insertAt = minPos + Math.floor(rand() * (items.length - minPos + 1));
+    }
+
+    items.splice(insertAt, 0, { kind: 'ad', data: ad });
+  });
+
+  return items;
+};
+
+// posiciona juegos y anuncios mezclados al azar y separa cajas para evitar solapamientos
+const computeUnifiedGraphLayout = (
+  gamesList: Game[],
+  adsList: CatalogAdSlot[],
+  seed: number
+): Record<string, GraphNodePos> => {
+  const rand = createSeededRandom(seed + 31);
+  const mixedItems = buildRandomInterleavedList(gamesList, adsList, seed);
+
+  const unifiedNodes: GraphNodeInput[] = mixedItems.map((item) => {
+    if (item.kind === 'ad') {
+      return {
+        key: `ad-${item.data.id}`,
+        width: item.data.graphSize.width,
+        height: item.data.graphSize.height,
+      };
+    }
+    return {
+      key: `game-${item.data.id}`,
+      width: CARD_WIDTH,
+      height: CARD_HEIGHT,
+    };
+  });
+
+  const cols = 4;
+  const colSpacing = 415;
+  const rowSpacing = 310;
+  const pad = 46;
+
+  const boxes = unifiedNodes.map((node, idx) => {
+    const col = idx % cols;
+    const row = Math.floor(idx / cols);
+    const rowStagger = row % 2 === 1 ? 115 : 0;
+    const jitterX = Math.round((rand() - 0.5) * 46);
+    const jitterY = Math.round((rand() - 0.5) * 42);
+
+    return {
+      ...node,
+      x: Math.max(50, 90 + col * colSpacing + rowStagger + jitterX),
+      y: Math.max(50, 85 + row * rowSpacing + jitterY),
+      delay: `${(idx * 0.38).toFixed(2)}s`,
+    };
+  });
+
+  // empuja nodos que se toquen respetando el tamano real de cada tarjeta o anuncio
+  for (let pass = 0; pass < 24; pass += 1) {
+    let moved = false;
+
+    for (let i = 0; i < boxes.length; i += 1) {
+      for (let j = i + 1; j < boxes.length; j += 1) {
+        const a = boxes[i];
+        const b = boxes[j];
+
+        const dx = b.x + b.width / 2 - (a.x + a.width / 2);
+        const dy = b.y + b.height / 2 - (a.y + a.height / 2);
+
+        const minX = (a.width + b.width) / 2 + pad;
+        const minY = (a.height + b.height) / 2 + pad;
+
+        const overlapX = minX - Math.abs(dx);
+        const overlapY = minY - Math.abs(dy);
+
+        if (overlapX > 0 && overlapY > 0) {
+          moved = true;
+          if (overlapX < overlapY) {
+            const shift = overlapX / 2 + 1;
+            const dir = dx >= 0 ? 1 : -1;
+            a.x = Math.max(40, a.x - dir * shift);
+            b.x = Math.max(40, b.x + dir * shift);
+          } else {
+            const shift = overlapY / 2 + 1;
+            const dir = dy >= 0 ? 1 : -1;
+            a.y = Math.max(40, a.y - dir * shift);
+            b.y = Math.max(40, b.y + dir * shift);
+          }
+        }
+      }
+    }
+
+    if (!moved) break;
+  }
+
+  const result: Record<string, GraphNodePos> = {};
+  boxes.forEach((b) => {
+    result[b.key] = {
+      x: Math.round(b.x),
+      y: Math.round(b.y),
+      delay: b.delay,
+    };
+  });
+
+  return result;
+};
 
 const computeAutoZoom = (viewportWidth: number): number => {
   if (viewportWidth >= FOUR_GAMES_ROW_SPAN) return 1;
@@ -114,6 +247,7 @@ export const BentoCatalogView: React.FC = () => {
   const [isGameCurrentlyRunning, setIsGameCurrentlyRunning] = useState<boolean>(false);
   //const [lastHoveredGame, setLastHoveredGame] = useState<Game | null>(null);
   const [hoveredId, setHoveredId] = useState<number | null>(null);
+  const [hoveredAdId, setHoveredAdId] = useState<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState<boolean>(false);
   const [showExploreIntro, setShowExploreIntro] = useState<boolean>(() => {
     return sessionStorage.getItem('udo_explore_intro_dismissed') !== 'true';
@@ -125,9 +259,12 @@ export const BentoCatalogView: React.FC = () => {
   );
   const [isZoomMenuOpen, setIsZoomMenuOpen] = useState<boolean>(false);
   const [isCameraPinned, setIsCameraPinned] = useState<boolean>(false);
-  const [nodePositions, setNodePositions] = useState<
-    Record<number, { x: number; y: number; delay: string }>
-  >({});
+  const [isAdLockingCamera, setIsAdLockingCamera] = useState<boolean>(false);
+  const [adLayoutSeed, setAdLayoutSeed] = useState<number>(() =>
+    Math.floor(Math.random() * 1000000)
+  );
+  const isCameraLocked = isCameraPinned || isAdLockingCamera;
+  
   const [camOffset, setCamOffset] = useState<{ x: number; y: number }>({ x: -10, y: -10 });
   const [isDraggingCanvas, setIsDraggingCanvas] = useState<boolean>(false);
 
@@ -146,10 +283,60 @@ export const BentoCatalogView: React.FC = () => {
     setZoomLevel(computeAutoZoom(vw));
   }, []);
 
+  // handlers de catalogo y seleccion
+  const handleSwitchViewMode = (nextMode: ViewMode) => {
+    soundManager.playClick();
+    if (activeGame) {
+      killGlobalRuffleInstance();
+      setActiveGame(null);
+      setPendingSwitchGame(null);
+      setIsGameCurrentlyRunning(false);
+      setIsCameraPinned(false);
+      setIsAdLockingCamera(false);
+      navigate('/', { replace: true });
+      window.dispatchEvent(
+        new CustomEvent('udo_game_playing_state', { detail: { playing: false } })
+      );
+    }
+    setIsCategoryMenuOpen(false);
+    // sortea nuevas posiciones de anuncios al cambiar entre grafo, bento y wii u
+    setAdLayoutSeed(Math.floor(Math.random() * 1000000));
+    setViewMode(nextMode);
+  };
+
+  const activeGraphAds = useMemo(
+    () => (!onlyFavorites && !activeGame ? CATALOG_AD_SLOTS : []),
+    [onlyFavorites, activeGame]
+  );
+
+  const visibleGames = useMemo(() => {
+    return games.filter((g) => {
+      if (onlyFavorites && !favorites.includes(g.id)) return false;
+      if (viewMode !== 'exploration') {
+        const matchesSearch = g.title.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesCat =
+          selectedCategory === 'Todas' || g.categories.includes(selectedCategory);
+        return matchesSearch && matchesCat;
+      }
+      return true;
+    });
+  }, [games, onlyFavorites, favorites, viewMode, searchQuery, selectedCategory]);
+
+  // calcula posiciones sin solapamientos para todos los juegos y anuncios visibles
+  const baseGraphLayout = useMemo(
+    () =>
+      computeUnifiedGraphLayout(
+        visibleGames,
+        onlyFavorites ? [] : CATALOG_AD_SLOTS,
+        adLayoutSeed
+      ),
+    [visibleGames, onlyFavorites, adLayoutSeed]
+  );
+
   const centerCameraOnGame = useCallback(
     (targetGame: Game, isPlayingExpanded = false) => {
       setZoomLevel(1);
-      const pos = nodePositions[targetGame.id] || BASE_SCATTER_COORDS[0];
+      const pos = baseGraphLayout[`game-${targetGame.id}`] || { x: 110, y: 95 };
       const vw = viewportRef.current?.clientWidth || window.innerWidth - 92;
       const vh = viewportRef.current?.clientHeight || window.innerHeight;
 
@@ -165,25 +352,8 @@ export const BentoCatalogView: React.FC = () => {
         y: Math.round(-pos.y + (vh - viewerH) / 2),
       });
     },
-    [nodePositions]
+    [baseGraphLayout]
   );
-
-  // handlers de catalogo y seleccion
-  const handleSwitchViewMode = (nextMode: ViewMode) => {
-    soundManager.playClick();
-    if (activeGame) {
-      killGlobalRuffleInstance();
-      setActiveGame(null);
-      setPendingSwitchGame(null);
-      setIsGameCurrentlyRunning(false);
-      setIsCameraPinned(false);
-      window.dispatchEvent(
-        new CustomEvent('udo_game_playing_state', { detail: { playing: false } })
-      );
-    }
-    setIsCategoryMenuOpen(false);
-    setViewMode(nextMode);
-  };
 
   const toggleFavorite = (gameId: number) => {
     setFavorites((prev) => {
@@ -207,7 +377,7 @@ export const BentoCatalogView: React.FC = () => {
     });
   };
 
-  const handleSelectGame = (game: Game) => {
+ const handleSelectGame = (game: Game) => {
     if (hasDraggedRef.current) return;
 
     if (activeGame && activeGame.id !== game.id && isGameCurrentlyRunning) {
@@ -217,11 +387,12 @@ export const BentoCatalogView: React.FC = () => {
     }
 
     const targetAlias = slugifyGameAlias(game.alias || game.title, game.id);
+    // marca el alias antes de navegar para evitar reaperturas en el efecto de ruta
+    appliedRouteAliasRef.current = targetAlias;
     navigate(`/juego/${targetAlias}`, { replace: true });
 
     soundManager.playOpen();
     setActiveGame(game);
-    //setLastHoveredGame(game);
 
     if (viewMode === 'exploration') {
       centerCameraOnGame(game, false);
@@ -236,10 +407,11 @@ export const BentoCatalogView: React.FC = () => {
     setPendingSwitchGame(null);
     killGlobalRuffleInstance();
     soundManager.playOpen();
+    appliedRouteAliasRef.current = targetAlias;
     setActiveGame(target);
-    //setLastHoveredGame(target);
     setIsGameCurrentlyRunning(false);
     setIsCameraPinned(false);
+    setIsAdLockingCamera(false);
     navigate(`/juego/${targetAlias}`, { replace: true });
     window.dispatchEvent(
       new CustomEvent('udo_game_playing_state', { detail: { playing: false } })
@@ -253,14 +425,31 @@ export const BentoCatalogView: React.FC = () => {
   const handleCloseActiveGame = () => {
     setActiveGame(null);
     setIsCameraPinned(false);
+    setIsAdLockingCamera(false);
     setIsGameCurrentlyRunning(false);
     const vw = viewportRef.current?.clientWidth || window.innerWidth - 92;
     setZoomLevel(computeAutoZoom(vw));
-    appliedRouteAliasRef.current = null;
+    // no limpia appliedRouteAliasRef aqui; se limpia cuando routeAlias sea undefined
     navigate('/', { replace: true });
   };
 
+  // fija y centra la camara del grafo mientras haya un anuncio activo
+  const handleAdActiveChange = useCallback(
+    (adActive: boolean) => {
+      setIsAdLockingCamera(adActive);
+      if (adActive) {
+        setIsDraggingCanvas(false);
+        if (viewMode === 'exploration' && activeGame) {
+          setIsCameraPinned(true);
+          centerCameraOnGame(activeGame, isGameCurrentlyRunning);
+        }
+      }
+    },
+    [activeGame, centerCameraOnGame, isGameCurrentlyRunning, viewMode]
+  );
+
   const handleTogglePinAndCenter = () => {
+    if (isAdLockingCamera) return;
     if (activeGame) {
       centerCameraOnGame(activeGame, isGameCurrentlyRunning);
     }
@@ -275,7 +464,7 @@ export const BentoCatalogView: React.FC = () => {
   };
 
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0 || isCameraPinned) return;
+    if (e.button !== 0 || isCameraLocked) return;
     setIsDraggingCanvas(true);
     hasDraggedRef.current = false;
     dragOriginRef.current = {
@@ -287,7 +476,7 @@ export const BentoCatalogView: React.FC = () => {
   };
 
   const handleCanvasMouseMove = (e: React.MouseEvent) => {
-    if (!isDraggingCanvas || isCameraPinned) return;
+    if (!isDraggingCanvas || isCameraLocked) return;
     const dx = e.clientX - dragOriginRef.current.startX;
     const dy = e.clientY - dragOriginRef.current.startY;
     if (Math.hypot(dx, dy) > 5) {
@@ -306,32 +495,11 @@ export const BentoCatalogView: React.FC = () => {
     }, 50);
   };
 
-  const nudgeCamera = (dx: number, dy: number) => {
-    if (isCameraPinned) return;
-    soundManager.playClick();
-    setCamOffset((prev) => ({
-      x: Math.max(-1450, Math.min(320, prev.x + dx)),
-      y: Math.max(-960, Math.min(260, prev.y + dy)),
-    }));
-  };
-
   // efectos de carga, redimensionamiento y ruta
   useEffect(() => {
     setIsLoading(true);
     fetchCatalogGames().then((loaded) => {
       setGames(loaded);
-      //if (loaded.length > 0) setLastHoveredGame(loaded[0]);
-
-      const initialMap: Record<number, { x: number; y: number; delay: string }> = {};
-      loaded.forEach((g, idx) => {
-        const base = BASE_SCATTER_COORDS[idx % BASE_SCATTER_COORDS.length];
-        initialMap[g.id] = {
-          x: Math.max(40, base.x + Math.round((Math.random() - 0.5) * 48)),
-          y: Math.max(40, base.y + Math.round((Math.random() - 0.5) * 44)),
-          delay: `${(idx * 0.42).toFixed(2)}s`,
-        };
-      });
-      setNodePositions(initialMap);
       setIsLoading(false);
     });
 
@@ -357,7 +525,11 @@ export const BentoCatalogView: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (isLoading || !routeAlias || games.length === 0) return;
+    if (!routeAlias) {
+      appliedRouteAliasRef.current = null;
+      return;
+    }
+    if (isLoading || games.length === 0) return;
     if (appliedRouteAliasRef.current === routeAlias) return;
 
     const normalizedTarget = slugifyGameAlias(routeAlias);
@@ -369,7 +541,6 @@ export const BentoCatalogView: React.FC = () => {
     if (matchedGame) {
       appliedRouteAliasRef.current = routeAlias;
       setActiveGame(matchedGame);
-      //setLastHoveredGame(matchedGame);
       if (viewMode === 'exploration') {
         setTimeout(() => centerCameraOnGame(matchedGame, false), 60);
       }
@@ -389,26 +560,14 @@ export const BentoCatalogView: React.FC = () => {
     [recommendedGames]
   );  
 
-  const visibleGames = games.filter((g) => {
-    if (onlyFavorites && !favorites.includes(g.id)) return false;
-    if (viewMode !== 'exploration') {
-      const matchesSearch = g.title.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCat =
-        selectedCategory === 'Todas' || g.categories.includes(selectedCategory);
-      return matchesSearch && matchesCat;
-    }
-    return true;
-  });
+
 
   const effectiveNodeCoords = useMemo(() => {
-    const activeCoord = activeGame ? nodePositions[activeGame.id] : null;
-    const result: Record<number, { x: number; y: number; delay: string }> = {};
+    const activeCoord = activeGame ? baseGraphLayout[`game-${activeGame.id}`] : null;
+    const result: Record<number, GraphNodePos> = {};
 
-    visibleGames.forEach((game, idx) => {
-      const basePos = nodePositions[game.id] || {
-        ...BASE_SCATTER_COORDS[idx % BASE_SCATTER_COORDS.length],
-        delay: '0s',
-      };
+    visibleGames.forEach((game) => {
+      const basePos = baseGraphLayout[`game-${game.id}`] || { x: 110, y: 95, delay: '0s' };
       let pushX = 0;
       let pushY = 0;
 
@@ -429,48 +588,79 @@ export const BentoCatalogView: React.FC = () => {
     });
 
     return result;
-  }, [visibleGames, nodePositions, activeGame]);
+  }, [visibleGames, baseGraphLayout, activeGame]);
 
-  const graphEdges = useMemo(() => {
+
+
+
+
+
+
+  const gridItemsWithAds = useMemo<CatalogGridItem[]>(
+    () =>
+      buildRandomInterleavedList(
+        visibleGames,
+        onlyFavorites ? [] : CATALOG_AD_SLOTS,
+        adLayoutSeed + 97
+      ),
+    [visibleGames, onlyFavorites, adLayoutSeed]
+  );
+
+ const graphEdges = useMemo(() => {
     const edgesMap = new Map<
       string,
-      { idA: number; idB: number; x1: number; y1: number; x2: number; y2: number }
+      { keyA: string; keyB: string; x1: number; y1: number; x2: number; y2: number }
     >();
 
-    visibleGames.forEach((gA) => {
-      const posA = effectiveNodeCoords[gA.id];
-      if (!posA) return;
-      const centerAx = posA.x + CARD_WIDTH / 2;
-      const centerAy = posA.y + CARD_HEIGHT / 2;
+    const allNodes: Array<{ key: string; cx: number; cy: number }> = [];
 
-      const neighbors = visibleGames
-        .filter((gB) => gB.id !== gA.id && Boolean(effectiveNodeCoords[gB.id]))
-        .map((gB) => {
-          const posB = effectiveNodeCoords[gB.id];
-          const centerBx = posB.x + CARD_WIDTH / 2;
-          const centerBy = posB.y + CARD_HEIGHT / 2;
-          return { gB, centerBx, centerBy, dist: Math.hypot(centerAx - centerBx, centerAy - centerBy) };
-        })
+    visibleGames.forEach((g) => {
+      const pos = effectiveNodeCoords[g.id];
+      if (!pos) return;
+      allNodes.push({
+        key: `game-${g.id}`,
+        cx: pos.x + CARD_WIDTH / 2,
+        cy: pos.y + CARD_HEIGHT / 2,
+      });
+    });
+
+    activeGraphAds.forEach((ad) => {
+      const pos = baseGraphLayout[`ad-${ad.id}`];
+      if (!pos) return;
+      allNodes.push({
+        key: `ad-${ad.id}`,
+        cx: pos.x + ad.graphSize.width / 2,
+        cy: pos.y + ad.graphSize.height / 2,
+      });
+    });
+
+    allNodes.forEach((nodeA) => {
+      const neighbors = allNodes
+        .filter((nodeB) => nodeB.key !== nodeA.key)
+        .map((nodeB) => ({
+          nodeB,
+          dist: Math.hypot(nodeA.cx - nodeB.cx, nodeA.cy - nodeB.cy),
+        }))
         .sort((a, b) => a.dist - b.dist)
         .slice(0, 4);
 
-      neighbors.forEach(({ gB, centerBx, centerBy }) => {
-        const key = `${Math.min(gA.id, gB.id)}-${Math.max(gA.id, gB.id)}`;
-        if (!edgesMap.has(key)) {
-          edgesMap.set(key, {
-            idA: gA.id,
-            idB: gB.id,
-            x1: centerAx,
-            y1: centerAy,
-            x2: centerBx,
-            y2: centerBy,
+      neighbors.forEach(({ nodeB }) => {
+        const edgeKey = [nodeA.key, nodeB.key].sort().join('__');
+        if (!edgesMap.has(edgeKey)) {
+          edgesMap.set(edgeKey, {
+            keyA: nodeA.key,
+            keyB: nodeB.key,
+            x1: nodeA.cx,
+            y1: nodeA.cy,
+            x2: nodeB.cx,
+            y2: nodeB.cy,
           });
         }
       });
     });
 
     return Array.from(edgesMap.values());
-  }, [visibleGames, effectiveNodeCoords]);
+  }, [visibleGames, effectiveNodeCoords, activeGraphAds, baseGraphLayout]);
 
   if (isLoading) {
     return (
@@ -624,66 +814,20 @@ export const BentoCatalogView: React.FC = () => {
         <div
           ref={viewportRef}
           className={`exploration-free-viewport ${isDraggingCanvas ? 'grabbing' : ''} ${
-            isCameraPinned ? 'pinned-lock' : ''
+            isCameraLocked ? 'pinned-lock' : ''
           }`}
           onMouseDown={handleCanvasMouseDown}
           onMouseMove={handleCanvasMouseMove}
           onMouseUp={handleCanvasMouseUp}
           onMouseLeave={handleCanvasMouseUp}
           onWheel={(e) => {
+            if (isCameraLocked) return;
             if (e.ctrlKey || e.metaKey) {
               e.preventDefault();
               handleZoomChange(e.deltaY < 0 ? 0.1 : -0.1);
             }
           }}
         >
-          {!activeGame && (
-            <>
-              <button
-                type="button"
-                className="axis-guide-indicator axis-guide-top"
-                onClick={() => nudgeCamera(0, 240)}
-                title="Explorar Arriba"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="18 15 12 9 6 15" />
-                </svg>
-              </button>
-
-              <button
-                type="button"
-                className="axis-guide-indicator axis-guide-bottom"
-                onClick={() => nudgeCamera(0, -240)}
-                title="Explorar Abajo"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
-              </button>
-
-              <button
-                type="button"
-                className="axis-guide-indicator axis-guide-left"
-                onClick={() => nudgeCamera(260, 0)}
-                title="Explorar Izquierda"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="15 18 9 12 15 6" />
-                </svg>
-              </button>
-
-              <button
-                type="button"
-                className="axis-guide-indicator axis-guide-right"
-                onClick={() => nudgeCamera(-260, 0)}
-                title="Explorar Derecha"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-              </button>
-            </>
-          )}
 
           <div
             className="exploration-infinite-plane"
@@ -695,13 +839,21 @@ export const BentoCatalogView: React.FC = () => {
           >
             <svg className="exploration-graph-svg">
               {graphEdges.map((edge) => {
+                const activeKey = activeGame ? `game-${activeGame.id}` : null;
+                const hoveredKey = hoveredId !== null
+                  ? `game-${hoveredId}`
+                  : hoveredAdId
+                    ? `ad-${hoveredAdId}`
+                    : null;
+
                 const isHighlighted =
-                  hoveredId === edge.idA ||
-                  hoveredId === edge.idB ||
-                  activeGame?.id === edge.idA ||
-                  activeGame?.id === edge.idB;
+                  hoveredKey === edge.keyA ||
+                  hoveredKey === edge.keyB ||
+                  activeKey === edge.keyA ||
+                  activeKey === edge.keyB;
+
                 return (
-                  <g key={`${edge.idA}-${edge.idB}`}>
+                  <g key={`${edge.keyA}-${edge.keyB}`}>
                     <line
                       x1={edge.x1}
                       y1={edge.y1}
@@ -743,13 +895,14 @@ export const BentoCatalogView: React.FC = () => {
                       isFavorite={isFav}
                       userVote={votes[game.id]}
                       isExplorationMode={true}
-                      isCameraPinned={isCameraPinned}
+                      isCameraPinned={isCameraLocked}
                       onTogglePinCamera={handleTogglePinAndCenter}
                       onAutoPinOnPlay={handleAutoPinOnPlay}
                       onToggleFavorite={toggleFavorite}
                       onVote={handleVote}
                       onClose={handleCloseActiveGame}
                       onPlayingChange={setIsGameCurrentlyRunning}
+                      onAdActiveChange={handleAdActiveChange}
                     />
                   ) : (
                     <div
@@ -798,15 +951,119 @@ export const BentoCatalogView: React.FC = () => {
                 </div>
               );
             })}
+
+            {activeGraphAds.map((ad) => {
+              const coord = baseGraphLayout[`ad-${ad.id}`] || { x: ad.graphCoord.x, y: ad.graphCoord.y, delay: '0s' };
+              const isAdHovered = hoveredAdId === ad.id;
+
+              return (
+                <div
+                  key={ad.id}
+                  className="scatter-node-wrapper pop-item-enter"
+                  style={{
+                    left: `${coord.x}px`,
+                    top: `${coord.y}px`,
+                    zIndex: isAdHovered ? 25 : 6,
+                  }}
+                >
+                  <div className="floating-space-wobble" style={{ animationDelay: coord.delay }}>
+                    <article
+                      className="game-bevel-card ad-graph-node-card"
+                      style={{
+                        width: `${ad.graphSize.width}px`,
+                        height: `${ad.graphSize.height}px`,
+                      }}
+                      onMouseEnter={() => {
+                        soundManager.playHover();
+                        setHoveredAdId(ad.id);
+                      }}
+                      onMouseLeave={() => setHoveredAdId(null)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        soundManager.playClick();
+                      }}
+                      title={`Espacio publicitario: ${ad.slotCode}`}
+                    >
+                      <div className="game-card-inner-clip ad-card-surface">
+                        <CatalogCardBadge label="ANUNCIO" />
+                        <div className="ad-card-copy">
+                          <span className="ad-slot-code">{ad.slotCode}</span>
+                          <div className="ad-card-title">{ad.title}</div>
+                          <div className="ad-card-sub">{ad.subtitle}</div>
+                        </div>
+                      </div>
+                    </article>
+                  </div>
+                </div>
+              );
+            })}
+
           </div>
         </div>
       )}
 
       {viewMode !== 'exploration' && (
         <div className={viewMode === 'bento' ? 'friv-bento-grid' : 'wiiu-channel-grid'}>
-          {visibleGames.map((game) => {
+          {gridItemsWithAds.map((item) => {
+            if (item.kind === 'ad') {
+              const ad = item.data;
+
+              if (viewMode === 'wii-u') {
+                return (
+                  <div
+                    key={ad.id}
+                    className="wiiu-channel-tile pop-item-enter ad-slot-card-border"
+                    onClick={() => soundManager.playClick()}
+                    title={`Espacio publicitario: ${ad.slotCode}`}
+                  >
+                    <div className="wiiu-channel-inner ad-card-surface">
+                      <CatalogCardBadge label="ANUNCIO" />
+                      <div className="ad-card-copy">
+                        <span className="ad-slot-code">{ad.slotCode}</span>
+                        <div className="ad-card-sub">{ad.subtitle}</div>
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        textAlign: 'center',
+                        fontSize: '0.88rem',
+                        fontWeight: 600,
+                        paddingTop: '6px',
+                        color: 'var(--primary-border)',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {ad.title}
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <article
+                  key={ad.id}
+                  className={`game-bevel-card size-${ad.bentoSize} pop-item-enter ad-slot-card-border`}
+                  onClick={() => soundManager.playClick()}
+                  title={`Espacio publicitario: ${ad.slotCode}`}
+                >
+                  <div className="game-card-inner-clip ad-card-surface">
+                    <CatalogCardBadge label="ANUNCIO" />
+                    <div className="ad-card-copy">
+                      <span className="ad-slot-code">{ad.slotCode}</span>
+                      <div className="ad-card-title">{ad.title}</div>
+                      <div className="ad-card-sub">{ad.subtitle}</div>
+                    </div>
+                  </div>
+                </article>
+              );
+            }
+
+            const game = item.data;
             const isHovered = hoveredId === game.id;
             const isFav = favorites.includes(game.id);
+            const isRec = recommendedIds.has(game.id);
             const sizeClass = `size-${game.bentoSize || 'small'}`;
 
             if (viewMode === 'wii-u') {
@@ -822,7 +1079,7 @@ export const BentoCatalogView: React.FC = () => {
                   onClick={() => handleSelectGame(game)}
                 >
                   <div className="wiiu-channel-inner">
-                    {recommendedIds.has(game.id) && <CatalogCardBadge label="RECOMENDADO" />}
+                    {isRec && <CatalogCardBadge label="RECOMENDADO" />}
                     <img
                       src={isHovered && game.previewGifUrl ? game.previewGifUrl : game.coverUrl}
                       alt={game.title}
@@ -854,13 +1111,12 @@ export const BentoCatalogView: React.FC = () => {
                 onMouseEnter={() => {
                   soundManager.playHover();
                   setHoveredId(game.id);
-                  //setLastHoveredGame(game);
                 }}
                 onMouseLeave={() => setHoveredId(null)}
                 onClick={() => handleSelectGame(game)}
               >
                 <div className="game-card-inner-clip">
-                  {recommendedIds.has(game.id) && <CatalogCardBadge label="RECOMENDADO" />}
+                  {isRec && <CatalogCardBadge label="RECOMENDADO" />}
                   <img
                     src={isHovered && game.previewGifUrl ? game.previewGifUrl : game.coverUrl}
                     alt={game.title}
@@ -891,6 +1147,7 @@ export const BentoCatalogView: React.FC = () => {
         <div
           className="fullscreen-modal-backdrop"
           onClick={() => {
+            if (isAdLockingCamera) return;
             soundManager.playClose();
             killGlobalRuffleInstance();
             window.dispatchEvent(
@@ -908,6 +1165,7 @@ export const BentoCatalogView: React.FC = () => {
             onVote={handleVote}
             onClose={handleCloseActiveGame}
             onPlayingChange={setIsGameCurrentlyRunning}
+            onAdActiveChange={handleAdActiveChange}
           />
         </div>
       )}

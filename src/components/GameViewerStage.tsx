@@ -3,6 +3,12 @@ import { type Game, DEFAULT_LEADERBOARD, slugifyGameAlias } from '../data/gamesD
 import { RufflePlayer, killGlobalRuffleInstance } from './RufflePlayer';
 import { Confirm3dsModal } from './3dsConfirmModal';
 import { soundManager } from '../data/audioConfig';
+import {
+  type ViewerAdTrigger,
+  shouldShowPreRollMock,
+  shouldShowPostRollMock,
+} from '../data/adSlotsData';
+import { GameViewerAdOverlay } from './GameViewerAdOverlay';
 
 interface GameViewerStageProps {
   game: Game;
@@ -16,6 +22,7 @@ interface GameViewerStageProps {
   onVote: (gameId: number, type: 'LIKE' | 'DISLIKE') => void;
   onClose: () => void;
   onPlayingChange?: (playing: boolean) => void;
+  onAdActiveChange?: (adActive: boolean) => void;
 }
 
 export const GameViewerStage: React.FC<GameViewerStageProps> = ({
@@ -30,6 +37,7 @@ export const GameViewerStage: React.FC<GameViewerStageProps> = ({
   onVote,
   onClose,
   onPlayingChange,
+  onAdActiveChange,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
@@ -37,6 +45,7 @@ export const GameViewerStage: React.FC<GameViewerStageProps> = ({
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [isRankedOpen, setIsRankedOpen] = useState<boolean>(false);
   const [show3dsClosePrompt, setShow3dsClosePrompt] = useState<boolean>(false);
+  const [activeAdTrigger, setActiveAdTrigger] = useState<ViewerAdTrigger | null>(null);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
   const [showPinFirstTimeHint, setShowPinFirstTimeHint] = useState<boolean>(() => {
     return localStorage.getItem('udo_pin_hint_seen') !== 'true';
@@ -46,6 +55,18 @@ export const GameViewerStage: React.FC<GameViewerStageProps> = ({
   const shareUrl = `${window.location.origin}/juego/${resolvedAlias}`;
   const activeUrl = game.gameUrl || '/game-export/index.html';
   const isFlashSwf = game.tipo === 'FLASH' || activeUrl.toLowerCase().endsWith('.swf');
+
+  // avisa al catalogo si hay un anuncio activo para bloquear el movimiento del mapa
+    useEffect(() => {
+      const hasActiveAd = activeAdTrigger !== null;
+      onAdActiveChange?.(hasActiveAd);
+
+      return () => {
+        if (hasActiveAd) {
+          onAdActiveChange?.(false);
+        }
+      };
+    }, [activeAdTrigger, onAdActiveChange]);
 
   const emitPlayingState = useCallback((playing: boolean) => {
     window.dispatchEvent(
@@ -64,11 +85,22 @@ export const GameViewerStage: React.FC<GameViewerStageProps> = ({
     }
   }, []);
 
-  const executeImmediateClose = useCallback(() => {
-    soundManager.playClose();
+  // inicia la sesion del juego una vez superado el posible pre-roll
+  const launchGameRuntime = useCallback(() => {
+    setActiveAdTrigger(null);
     setShow3dsClosePrompt(false);
-    teardownRunningGame();
-    setIsPlaying(false);
+    setIsPlaying(true);
+    onPlayingChange?.(true);
+    emitPlayingState(true);
+
+    if (isExplorationMode) {
+      onAutoPinOnPlay?.();
+    }
+  }, [emitPlayingState, isExplorationMode, onAutoPinOnPlay, onPlayingChange]);
+
+  // finaliza el cierre del visor tras el posible post-roll
+  const finalizeCloseViewer = useCallback(() => {
+    setActiveAdTrigger(null);
     setIsRankedOpen(false);
     onPlayingChange?.(false);
     emitPlayingState(false);
@@ -78,16 +110,76 @@ export const GameViewerStage: React.FC<GameViewerStageProps> = ({
     }
 
     onClose();
-  }, [emitPlayingState, onClose, onPlayingChange, teardownRunningGame]);
+  }, [emitPlayingState, onClose, onPlayingChange]);
+
+  // caso 1: anuncio al inicio (pre-roll) antes de cargar el juego
+  const handleStartGame = () => {
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    soundManager.playOpen();
+    setShow3dsClosePrompt(false);
+
+    if (shouldShowPreRollMock(false)) {
+      emitPlayingState(true);
+      setActiveAdTrigger('pre-roll');
+      return;
+    }
+
+    launchGameRuntime();
+  };
+
+  // caso 2: anuncio al cerrar (post-roll) despues de matar el audio del juego
+  const executeImmediateClose = useCallback(() => {
+    soundManager.playClose();
+    setShow3dsClosePrompt(false);
+    const wasPlaying = isPlaying;
+    teardownRunningGame();
+    setIsPlaying(false);
+
+    if (wasPlaying && shouldShowPostRollMock(false)) {
+      setActiveAdTrigger('post-roll');
+      return;
+    }
+
+    finalizeCloseViewer();
+  }, [finalizeCloseViewer, isPlaying, teardownRunningGame]);
+
+  // resuelve lo que ocurre al terminar cualquiera de los 3 slots de anuncio
+  const handleAdCompleted = useCallback(
+    (completed: boolean) => {
+      const currentTrigger = activeAdTrigger;
+      setActiveAdTrigger(null);
+
+      if (currentTrigger === 'pre-roll') {
+        launchGameRuntime();
+        return;
+      }
+
+      if (currentTrigger === 'post-roll') {
+        finalizeCloseViewer();
+        return;
+      }
+
+      // caso 3: devuelve el resultado al iframe del juego (godot/html5)
+      if (currentTrigger === 'in-game-request' && iframeRef.current?.contentWindow) {
+        iframeRef.current.contentWindow.postMessage(
+          { type: 'AD_RESULT', completed },
+          '*'
+        );
+      }
+    },
+    [activeAdTrigger, finalizeCloseViewer, launchGameRuntime]
+  );
+
 
   const requestCloseViewer = useCallback(() => {
+    if (activeAdTrigger) return;
     if (isPlaying) {
       soundManager.playClick();
       setShow3dsClosePrompt(true);
       return;
     }
     executeImmediateClose();
-  }, [executeImmediateClose, isPlaying]);
+  }, [executeImmediateClose, isPlaying, activeAdTrigger]);
 
   const toggleFullscreen = useCallback(() => {
     if (!containerRef.current) return;
@@ -119,20 +211,10 @@ export const GameViewerStage: React.FC<GameViewerStageProps> = ({
     }
   }, [shareUrl]);
 
-  const handleStartGame = () => {
-    (document.activeElement as HTMLElement | null)?.blur?.();
-    soundManager.playOpen();
-    setShow3dsClosePrompt(false);
-    setIsPlaying(true);
-    onPlayingChange?.(true);
-    emitPlayingState(true);
-
-    if (isExplorationMode) {
-      onAutoPinOnPlay?.();
-    }
-  };
+  
 
   const handlePinClick = () => {
+    if (activeAdTrigger) return;
     soundManager.playClick();
     if (showPinFirstTimeHint) {
       setShowPinFirstTimeHint(false);
@@ -157,6 +239,14 @@ export const GameViewerStage: React.FC<GameViewerStageProps> = ({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (activeAdTrigger) {
+              if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+              }
+              return;
+      }
+
       const target = e.target as HTMLElement | null;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
         return;
@@ -181,6 +271,8 @@ export const GameViewerStage: React.FC<GameViewerStageProps> = ({
         requestCloseViewer();
       } else if (event.data?.type === 'UDO_GAME_FULLSCREEN') {
         toggleFullscreen();
+      } else if (event.data?.type === 'REQUEST_AD' && !isFlashSwf && isPlaying) {
+        setActiveAdTrigger('in-game-request');
       }
     };
 
@@ -190,7 +282,7 @@ export const GameViewerStage: React.FC<GameViewerStageProps> = ({
       window.removeEventListener('keydown', handleKeyDown, true);
       window.removeEventListener('message', handleFrameMessage);
     };
-  }, [requestCloseViewer, show3dsClosePrompt, toggleFullscreen]);
+  }, [requestCloseViewer, show3dsClosePrompt, toggleFullscreen, isFlashSwf, isPlaying, activeAdTrigger]);
 
   return (
     <div
@@ -213,6 +305,14 @@ export const GameViewerStage: React.FC<GameViewerStageProps> = ({
             soundManager.playClick();
             setShow3dsClosePrompt(false);
           }}
+        />
+      )}
+
+      {activeAdTrigger && (
+        <GameViewerAdOverlay
+          trigger={activeAdTrigger}
+          gameTitle={game.title}
+          onComplete={handleAdCompleted}
         />
       )}
 
