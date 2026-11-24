@@ -4,7 +4,7 @@
 // ============================================================================
 
 export const MAIN_THEME_URL =
-  'https://commondatastorage.googleapis.com/codeskulptor-demos/DDR_assets/Kangaroo_MusiQue_-_The_Neverwritten_Role_Playing_Game.mp3';
+  '/assets/audio/gamesUDONE-Theme.ogg';
 
 // Si deseas usar archivos .mp3/.wav propios para la interfaz, coloca la ruta aquí.
 // Si se deja vacío (''), usa el sintetizador retro integrado.

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { type Game, DEFAULT_LEADERBOARD, slugifyGameAlias } from '../data/gamesData';
 import { RufflePlayer, killGlobalRuffleInstance } from './RufflePlayer';
+import { Confirm3dsModal } from './3dsConfirmModal';
 import { soundManager } from '../data/audioConfig';
 
 interface GameViewerStageProps {
@@ -34,7 +35,6 @@ export const GameViewerStage: React.FC<GameViewerStageProps> = ({
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [playSessionId, setPlaySessionId] = useState<number>(0);
   const [isRankedOpen, setIsRankedOpen] = useState<boolean>(false);
   const [show3dsClosePrompt, setShow3dsClosePrompt] = useState<boolean>(false);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
@@ -44,6 +44,8 @@ export const GameViewerStage: React.FC<GameViewerStageProps> = ({
 
   const resolvedAlias = game.alias || slugifyGameAlias(game.title, game.id);
   const shareUrl = `${window.location.origin}/juego/${resolvedAlias}`;
+  const activeUrl = game.gameUrl || '/game-export/index.html';
+  const isFlashSwf = game.tipo === 'FLASH' || activeUrl.toLowerCase().endsWith('.swf');
 
   const emitPlayingState = useCallback((playing: boolean) => {
     window.dispatchEvent(
@@ -87,20 +89,6 @@ export const GameViewerStage: React.FC<GameViewerStageProps> = ({
     executeImmediateClose();
   }, [executeImmediateClose, isPlaying]);
 
-  useEffect(() => {
-    setIsPlaying(false);
-    setIsRankedOpen(false);
-    setShow3dsClosePrompt(false);
-    setCopiedLink(false);
-    onPlayingChange?.(false);
-    emitPlayingState(false);
-
-    return () => {
-      teardownRunningGame();
-      emitPlayingState(false);
-    };
-  }, [game.id, emitPlayingState, onPlayingChange, teardownRunningGame]);
-
   const toggleFullscreen = useCallback(() => {
     if (!containerRef.current) return;
     soundManager.playClick();
@@ -130,6 +118,42 @@ export const GameViewerStage: React.FC<GameViewerStageProps> = ({
       window.prompt('Copia el enlace del juego:', shareUrl);
     }
   }, [shareUrl]);
+
+  const handleStartGame = () => {
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    soundManager.playOpen();
+    setShow3dsClosePrompt(false);
+    setIsPlaying(true);
+    onPlayingChange?.(true);
+    emitPlayingState(true);
+
+    if (isExplorationMode) {
+      onAutoPinOnPlay?.();
+    }
+  };
+
+  const handlePinClick = () => {
+    soundManager.playClick();
+    if (showPinFirstTimeHint) {
+      setShowPinFirstTimeHint(false);
+      localStorage.setItem('udo_pin_hint_seen', 'true');
+    }
+    onTogglePinCamera?.();
+  };
+
+  useEffect(() => {
+    setIsPlaying(false);
+    setIsRankedOpen(false);
+    setShow3dsClosePrompt(false);
+    setCopiedLink(false);
+    onPlayingChange?.(false);
+    emitPlayingState(false);
+
+    return () => {
+      teardownRunningGame();
+      emitPlayingState(false);
+    };
+  }, [game.id, emitPlayingState, onPlayingChange, teardownRunningGame]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -168,32 +192,6 @@ export const GameViewerStage: React.FC<GameViewerStageProps> = ({
     };
   }, [requestCloseViewer, show3dsClosePrompt, toggleFullscreen]);
 
-  const handleStartGame = () => {
-    (document.activeElement as HTMLElement | null)?.blur?.();
-    soundManager.playOpen();
-    setShow3dsClosePrompt(false);
-    setPlaySessionId((prev) => prev + 1);
-    setIsPlaying(true);
-    onPlayingChange?.(true);
-    emitPlayingState(true);
-
-    if (isExplorationMode) {
-      onAutoPinOnPlay?.();
-    }
-  };
-
-  const handlePinClick = () => {
-    soundManager.playClick();
-    if (showPinFirstTimeHint) {
-      setShowPinFirstTimeHint(false);
-      localStorage.setItem('udo_pin_hint_seen', 'true');
-    }
-    onTogglePinCamera?.();
-  };
-
-  const activeUrl = game.gameUrl || '/game-export/index.html';
-  const isFlashSwf = game.tipo === 'FLASH' || activeUrl.toLowerCase().endsWith('.swf');
-
   return (
     <div
       ref={containerRef}
@@ -204,64 +202,18 @@ export const GameViewerStage: React.FC<GameViewerStageProps> = ({
       onClick={(e) => e.stopPropagation()}
     >
       {show3dsClosePrompt && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 120,
-            background: 'rgba(8, 4, 18, 0.78)',
-            backdropFilter: 'blur(6px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '18px',
+        <Confirm3dsModal
+          badgeText="SALIR DEL SOFTWARE"
+          title={`Cerrar ${game.title}`}
+          description="Se cerrara la partida actual y se liberara su audio. Los datos no guardados se perderan."
+          confirmLabel="Cerrar"
+          cancelLabel="Cancelar"
+          onConfirm={executeImmediateClose}
+          onCancel={() => {
+            soundManager.playClick();
+            setShow3dsClosePrompt(false);
           }}
-        >
-          <div
-            className="tactile-panel"
-            style={{
-              maxWidth: '410px',
-              width: '100%',
-              padding: '22px 24px',
-              textAlign: 'center',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '14px',
-              animation: 'jellyPop 0.24s var(--ease-squish) forwards',
-            }}
-          >
-            <span className="credit-role-badge" style={{ alignSelf: 'center' }}>
-              SALIR DEL SOFTWARE
-            </span>
-            <h3 style={{ fontSize: '1.25rem', color: 'var(--text-main)' }}>
-              Cerrar {game.title}
-            </h3>
-            <p style={{ fontSize: '0.86rem', color: 'var(--text-soft)', lineHeight: 1.4 }}>
-              Se cerrara la partida actual y se liberara su audio. Los datos no guardados se perderan.
-            </p>
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '4px' }}>
-              <button
-                type="button"
-                className="tactile-btn-purple"
-                style={{ padding: '10px 22px', fontSize: '0.86rem' }}
-                onClick={executeImmediateClose}
-              >
-                Cerrar
-              </button>
-              <button
-                type="button"
-                className="tactile-btn-dark"
-                style={{ padding: '10px 22px', fontSize: '0.86rem' }}
-                onClick={() => {
-                  soundManager.playClick();
-                  setShow3dsClosePrompt(false);
-                }}
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
+        />
       )}
 
       {copiedLink && (
@@ -405,17 +357,7 @@ export const GameViewerStage: React.FC<GameViewerStageProps> = ({
               </div>
             </div>
           ) : (
-            <div
-              key={`${game.id}-${playSessionId}`}
-              style={{
-                flex: 1,
-                width: '100%',
-                height: '100%',
-                minHeight: '320px',
-                backgroundColor: '#000000',
-                position: 'relative',
-              }}
-            >
+            <div style={{ flex: 1, width: '100%', height: '100%', minHeight: '320px', backgroundColor: '#000000', position: 'relative' }}>
               {isFlashSwf ? (
                 <RufflePlayer swfUrl={activeUrl} />
               ) : (
@@ -424,19 +366,13 @@ export const GameViewerStage: React.FC<GameViewerStageProps> = ({
                   data-game-runtime="true"
                   src={activeUrl}
                   title={game.title}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    border: 'none',
-                    display: 'block',
-                  }}
+                  style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
                   allowFullScreen
                 />
               )}
             </div>
           )}
 
-          {/* BARRA DE ACCIONES EN UNA SOLA LINEA */}
           <div
             style={{
               padding: '8px 14px',

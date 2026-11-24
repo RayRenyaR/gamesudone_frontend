@@ -3,9 +3,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { type Game, fetchCatalogGames, slugifyGameAlias } from '../data/gamesData';
 import { GameViewerStage } from '../components/GameViewerStage';
 import { killGlobalRuffleInstance } from '../components/RufflePlayer';
-import { MorrocoyaEasterEgg } from '../components/MorrocoyaEasterEgg';
+import { Confirm3dsModal } from '../components/3dsConfirmModal';
+import { PetWalkerEasterEgg } from '../components/PetWalkerEasterEgg';
 import { soundManager } from '../data/audioConfig';
-
+import { RecommendedBubblesTray } from '../components/RecommendedBubblesTray';
+import { CatalogCardBadge } from '../components/CatalogCardBadge';
+import { resolveRecommendedGames } from '../data/recommendationsEngine';
 
 type ViewMode = 'exploration' | 'bento' | 'wii-u';
 
@@ -72,50 +75,12 @@ const renderCategoryIcon = (category: string) => {
   );
 };
 
+
+
+
 export const BentoCatalogView: React.FC = () => {
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
-
-  const [games, setGames] = useState<Game[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-
-  const [viewMode, setViewMode] = useState<ViewMode>('exploration');
-  const [onlyFavorites, setOnlyFavorites] = useState<boolean>(false);
-  const [isChatOpen, setIsChatOpen] = useState<boolean>(false);
-
-  const [zoomLevel, setZoomLevel] = useState<number>(() =>
-    computeAutoZoom(window.innerWidth - 92)
-  );
-  const [isZoomMenuOpen, setIsZoomMenuOpen] = useState<boolean>(false);
-
-  const [showExploreIntro, setShowExploreIntro] = useState<boolean>(() => {
-    return sessionStorage.getItem('udo_explore_intro_dismissed') !== 'true';
-  });
-
-  const [isSearchExpanded, setIsSearchExpanded] = useState<boolean>(false);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('Todas');
-  const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState<boolean>(false);
-
-  const [favorites, setFavorites] = useState<number[]>(() => {
-    const saved = localStorage.getItem('udo_fav_games');
-    return saved ? JSON.parse(saved) : [1, 2];
-  });
-  const [votes, setVotes] = useState<Record<number, 'LIKE' | 'DISLIKE'>>({});
-
-  const [activeGame, setActiveGame] = useState<Game | null>(null);
-  const [pendingSwitchGame, setPendingSwitchGame] = useState<Game | null>(null);
-  const [isGameCurrentlyRunning, setIsGameCurrentlyRunning] = useState<boolean>(false);
-  const [isCameraPinned, setIsCameraPinned] = useState<boolean>(false);
-  const [lastHoveredGame, setLastHoveredGame] = useState<Game | null>(null);
-  const [hoveredId, setHoveredId] = useState<number | null>(null);
-
-  const [nodePositions, setNodePositions] = useState<
-    Record<number, { x: number; y: number; delay: string }>
-  >({});
-
-  const [camOffset, setCamOffset] = useState<{ x: number; y: number }>({ x: -10, y: -10 });
-  const [isDraggingCanvas, setIsDraggingCanvas] = useState<boolean>(false);
   const dragOriginRef = useRef<{ startX: number; startY: number; camX: number; camY: number }>({
     startX: 0,
     startY: 0,
@@ -123,53 +88,50 @@ export const BentoCatalogView: React.FC = () => {
     camY: 0,
   });
   const hasDraggedRef = useRef<boolean>(false);
+  const appliedRouteAliasRef = useRef<string | null>(null);
 
   const { alias: routeAlias } = useParams<{ alias?: string }>();
   const navigate = useNavigate();
-  const appliedRouteAliasRef = useRef<string | null>(null);
 
+  // estado de catalogo y filtros
+  const [games, setGames] = useState<Game[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [viewMode, setViewMode] = useState<ViewMode>('exploration');
+  const [onlyFavorites, setOnlyFavorites] = useState<boolean>(false);
+  const [isSearchExpanded, setIsSearchExpanded] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('Todas');
+  const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState<boolean>(false);
+  const [favorites, setFavorites] = useState<number[]>(() => {
+    const saved = localStorage.getItem('udo_fav_games');
+    return saved ? JSON.parse(saved) : [1, 2];
+  });
+  const [votes, setVotes] = useState<Record<number, 'LIKE' | 'DISLIKE'>>({});
 
+  // estado del visor y navegacion
+  const [activeGame, setActiveGame] = useState<Game | null>(null);
+  const [pendingSwitchGame, setPendingSwitchGame] = useState<Game | null>(null);
+  const [isGameCurrentlyRunning, setIsGameCurrentlyRunning] = useState<boolean>(false);
+  //const [lastHoveredGame, setLastHoveredGame] = useState<Game | null>(null);
+  const [hoveredId, setHoveredId] = useState<number | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState<boolean>(false);
+  const [showExploreIntro, setShowExploreIntro] = useState<boolean>(() => {
+    return sessionStorage.getItem('udo_explore_intro_dismissed') !== 'true';
+  });
 
-  useEffect(() => {
-    setIsLoading(true);
-    fetchCatalogGames().then((loaded) => {
-      setGames(loaded);
-      if (loaded.length > 0) setLastHoveredGame(loaded[0]);
+  // estado de camara, zoom y grafo
+  const [zoomLevel, setZoomLevel] = useState<number>(() =>
+    computeAutoZoom(window.innerWidth - 92)
+  );
+  const [isZoomMenuOpen, setIsZoomMenuOpen] = useState<boolean>(false);
+  const [isCameraPinned, setIsCameraPinned] = useState<boolean>(false);
+  const [nodePositions, setNodePositions] = useState<
+    Record<number, { x: number; y: number; delay: string }>
+  >({});
+  const [camOffset, setCamOffset] = useState<{ x: number; y: number }>({ x: -10, y: -10 });
+  const [isDraggingCanvas, setIsDraggingCanvas] = useState<boolean>(false);
 
-      const initialMap: Record<number, { x: number; y: number; delay: string }> = {};
-      loaded.forEach((g, idx) => {
-        const base = BASE_SCATTER_COORDS[idx % BASE_SCATTER_COORDS.length];
-        initialMap[g.id] = {
-          x: Math.max(40, base.x + Math.round((Math.random() - 0.5) * 48)),
-          y: Math.max(40, base.y + Math.round((Math.random() - 0.5) * 44)),
-          delay: `${(idx * 0.42).toFixed(2)}s`,
-        };
-      });
-      setNodePositions(initialMap);
-      setIsLoading(false);
-    });
-
-    const onResize = () => {
-      const vw = viewportRef.current?.clientWidth || window.innerWidth - 92;
-      setZoomLevel((prev) => {
-        const fitted = computeAutoZoom(vw);
-        return prev > fitted ? fitted : prev;
-      });
-    };
-
-    const onChatToggle = (e: Event) => {
-      const custom = e as CustomEvent<{ open: boolean }>;
-      setIsChatOpen(Boolean(custom.detail?.open));
-    };
-
-    window.addEventListener('resize', onResize);
-    window.addEventListener('udo_chat_state', onChatToggle);
-    return () => {
-      window.removeEventListener('resize', onResize);
-      window.removeEventListener('udo_chat_state', onChatToggle);
-    };
-  }, []);
-
+  // helpers de camara y zoom
   const handleZoomChange = useCallback((delta: number) => {
     soundManager.playClick();
     setZoomLevel((prev) => {
@@ -184,7 +146,6 @@ export const BentoCatalogView: React.FC = () => {
     setZoomLevel(computeAutoZoom(vw));
   }, []);
 
-  // centra el visor considerando si esta en ficha previa o en modo jugando
   const centerCameraOnGame = useCallback(
     (targetGame: Game, isPlayingExpanded = false) => {
       setZoomLevel(1);
@@ -199,17 +160,15 @@ export const BentoCatalogView: React.FC = () => {
         ? Math.min(vh * 0.85, (viewerW * 9.6) / 16)
         : Math.min(vh * 0.74, (viewerW * 9.6) / 16);
 
-      const exactCenterX = -pos.x + (vw - viewerW) / 2;
-      const exactCenterY = -pos.y + (vh - viewerH) / 2;
-
       setCamOffset({
-        x: Math.round(exactCenterX),
-        y: Math.round(exactCenterY),
+        x: Math.round(-pos.x + (vw - viewerW) / 2),
+        y: Math.round(-pos.y + (vh - viewerH) / 2),
       });
     },
     [nodePositions]
   );
 
+  // handlers de catalogo y seleccion
   const handleSwitchViewMode = (nextMode: ViewMode) => {
     soundManager.playClick();
     if (activeGame) {
@@ -262,7 +221,7 @@ export const BentoCatalogView: React.FC = () => {
 
     soundManager.playOpen();
     setActiveGame(game);
-    setLastHoveredGame(game);
+    //setLastHoveredGame(game);
 
     if (viewMode === 'exploration') {
       centerCameraOnGame(game, false);
@@ -272,13 +231,16 @@ export const BentoCatalogView: React.FC = () => {
   const handleConfirmSwitchGame = () => {
     if (!pendingSwitchGame) return;
     const target = pendingSwitchGame;
+    const targetAlias = slugifyGameAlias(target.alias || target.title, target.id);
+
     setPendingSwitchGame(null);
     killGlobalRuffleInstance();
     soundManager.playOpen();
     setActiveGame(target);
-    setLastHoveredGame(target);
+    //setLastHoveredGame(target);
     setIsGameCurrentlyRunning(false);
     setIsCameraPinned(false);
+    navigate(`/juego/${targetAlias}`, { replace: true });
     window.dispatchEvent(
       new CustomEvent('udo_game_playing_state', { detail: { playing: false } })
     );
@@ -288,6 +250,16 @@ export const BentoCatalogView: React.FC = () => {
     }
   };
 
+  const handleCloseActiveGame = () => {
+    setActiveGame(null);
+    setIsCameraPinned(false);
+    setIsGameCurrentlyRunning(false);
+    const vw = viewportRef.current?.clientWidth || window.innerWidth - 92;
+    setZoomLevel(computeAutoZoom(vw));
+    appliedRouteAliasRef.current = null;
+    navigate('/', { replace: true });
+  };
+
   const handleTogglePinAndCenter = () => {
     if (activeGame) {
       centerCameraOnGame(activeGame, isGameCurrentlyRunning);
@@ -295,7 +267,6 @@ export const BentoCatalogView: React.FC = () => {
     setIsCameraPinned((prev) => !prev);
   };
 
-  // fija y centra la camara automaticamente al iniciar la partida
   const handleAutoPinOnPlay = () => {
     setIsCameraPinned(true);
     if (activeGame) {
@@ -315,26 +286,6 @@ export const BentoCatalogView: React.FC = () => {
     };
   };
 
-      useEffect(() => {
-    if (isLoading || !routeAlias || games.length === 0) return;
-    if (appliedRouteAliasRef.current === routeAlias) return;
-
-    const normalizedTarget = slugifyGameAlias(routeAlias);
-    const matchedGame = games.find((g) => {
-      const gAlias = slugifyGameAlias(g.alias || g.title, g.id);
-      return gAlias === normalizedTarget || String(g.id) === routeAlias;
-    });
-
-    if (matchedGame) {
-      appliedRouteAliasRef.current = routeAlias;
-      setActiveGame(matchedGame);
-      setLastHoveredGame(matchedGame);
-      if (viewMode === 'exploration') {
-        setTimeout(() => centerCameraOnGame(matchedGame, false), 60);
-      }
-    }
-  }, [isLoading, routeAlias, games, viewMode, centerCameraOnGame]);
-
   const handleCanvasMouseMove = (e: React.MouseEvent) => {
     if (!isDraggingCanvas || isCameraPinned) return;
     const dx = e.clientX - dragOriginRef.current.startX;
@@ -342,9 +293,10 @@ export const BentoCatalogView: React.FC = () => {
     if (Math.hypot(dx, dy) > 5) {
       hasDraggedRef.current = true;
     }
-    const nextX = Math.max(-1450, Math.min(320, dragOriginRef.current.camX + dx));
-    const nextY = Math.max(-960, Math.min(260, dragOriginRef.current.camY + dy));
-    setCamOffset({ x: nextX, y: nextY });
+    setCamOffset({
+      x: Math.max(-1450, Math.min(320, dragOriginRef.current.camX + dx)),
+      y: Math.max(-960, Math.min(260, dragOriginRef.current.camY + dy)),
+    });
   };
 
   const handleCanvasMouseUp = () => {
@@ -363,15 +315,82 @@ export const BentoCatalogView: React.FC = () => {
     }));
   };
 
-  const categories = [
-    'Todas',
-    ...Array.from(new Set(games.flatMap((g) => g.categories))),
-  ];
+  // efectos de carga, redimensionamiento y ruta
+  useEffect(() => {
+    setIsLoading(true);
+    fetchCatalogGames().then((loaded) => {
+      setGames(loaded);
+      //if (loaded.length > 0) setLastHoveredGame(loaded[0]);
+
+      const initialMap: Record<number, { x: number; y: number; delay: string }> = {};
+      loaded.forEach((g, idx) => {
+        const base = BASE_SCATTER_COORDS[idx % BASE_SCATTER_COORDS.length];
+        initialMap[g.id] = {
+          x: Math.max(40, base.x + Math.round((Math.random() - 0.5) * 48)),
+          y: Math.max(40, base.y + Math.round((Math.random() - 0.5) * 44)),
+          delay: `${(idx * 0.42).toFixed(2)}s`,
+        };
+      });
+      setNodePositions(initialMap);
+      setIsLoading(false);
+    });
+
+    const onResize = () => {
+      const vw = viewportRef.current?.clientWidth || window.innerWidth - 92;
+      setZoomLevel((prev) => {
+        const fitted = computeAutoZoom(vw);
+        return prev > fitted ? fitted : prev;
+      });
+    };
+
+    const onChatToggle = (e: Event) => {
+      const custom = e as CustomEvent<{ open: boolean }>;
+      setIsChatOpen(Boolean(custom.detail?.open));
+    };
+
+    window.addEventListener('resize', onResize);
+    window.addEventListener('udo_chat_state', onChatToggle);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('udo_chat_state', onChatToggle);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isLoading || !routeAlias || games.length === 0) return;
+    if (appliedRouteAliasRef.current === routeAlias) return;
+
+    const normalizedTarget = slugifyGameAlias(routeAlias);
+    const matchedGame = games.find((g) => {
+      const gAlias = slugifyGameAlias(g.alias || g.title, g.id);
+      return gAlias === normalizedTarget || String(g.id) === routeAlias;
+    });
+
+    if (matchedGame) {
+      appliedRouteAliasRef.current = routeAlias;
+      setActiveGame(matchedGame);
+      //setLastHoveredGame(matchedGame);
+      if (viewMode === 'exploration') {
+        setTimeout(() => centerCameraOnGame(matchedGame, false), 60);
+      }
+    }
+  }, [isLoading, routeAlias, games, viewMode, centerCameraOnGame]);
+
+  // datos derivados del grafo y filtros
+  const categories = ['Todas', ...Array.from(new Set(games.flatMap((g) => g.categories)))];
+
+  const recommendedGames = useMemo(
+  () => resolveRecommendedGames({ allGames: games, externalRecommendedGames: null }),
+  [games]
+  );
+
+  const recommendedIds = useMemo(
+    () => new Set(recommendedGames.slice(0, 4).map((g) => g.id)),
+    [recommendedGames]
+  );  
 
   const visibleGames = games.filter((g) => {
-    if (onlyFavorites && !favorites.includes(g.id)) {
-      return false;
-    }
+    if (onlyFavorites && !favorites.includes(g.id)) return false;
     if (viewMode !== 'exploration') {
       const matchesSearch = g.title.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCat =
@@ -430,8 +449,7 @@ export const BentoCatalogView: React.FC = () => {
           const posB = effectiveNodeCoords[gB.id];
           const centerBx = posB.x + CARD_WIDTH / 2;
           const centerBy = posB.y + CARD_HEIGHT / 2;
-          const dist = Math.hypot(centerAx - centerBx, centerAy - centerBy);
-          return { gB, centerBx, centerBy, dist };
+          return { gB, centerBx, centerBy, dist: Math.hypot(centerAx - centerBx, centerAy - centerBy) };
         })
         .sort((a, b) => a.dist - b.dist)
         .slice(0, 4);
@@ -480,66 +498,20 @@ export const BentoCatalogView: React.FC = () => {
         </div>
       )}
 
-      {/* modal estilo 3ds para confirmar cambio de juego mientras otro corre */}
       {pendingSwitchGame && activeGame && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 1700,
-            background: 'rgba(8, 4, 18, 0.78)',
-            backdropFilter: 'blur(6px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '18px',
+        <Confirm3dsModal
+          badgeText="CAMBIAR DE SOFTWARE"
+          title={`Cerrar ${activeGame.title}`}
+          description={`Se cerrara la partida actual para abrir ${pendingSwitchGame.title}.`}
+          confirmLabel="Aceptar"
+          cancelLabel="Cancelar"
+          zIndex={1700}
+          onConfirm={handleConfirmSwitchGame}
+          onCancel={() => {
+            soundManager.playClick();
+            setPendingSwitchGame(null);
           }}
-        >
-          <div
-            className="tactile-panel"
-            style={{
-              maxWidth: '420px',
-              width: '100%',
-              padding: '22px 24px',
-              textAlign: 'center',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '14px',
-              animation: 'jellyPop 0.24s var(--ease-squish) forwards',
-            }}
-          >
-            <span className="credit-role-badge" style={{ alignSelf: 'center' }}>
-              CAMBIAR DE SOFTWARE
-            </span>
-            <h3 style={{ fontSize: '1.2rem', color: 'var(--text-main)' }}>
-              Cerrar {activeGame.title}
-            </h3>
-            <p style={{ fontSize: '0.86rem', color: 'var(--text-soft)', lineHeight: 1.4 }}>
-              Se cerrara la partida actual para abrir {pendingSwitchGame.title}.
-            </p>
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '4px' }}>
-              <button
-                type="button"
-                className="tactile-btn-purple"
-                style={{ padding: '10px 22px', fontSize: '0.86rem' }}
-                onClick={handleConfirmSwitchGame}
-              >
-                Aceptar
-              </button>
-              <button
-                type="button"
-                className="tactile-btn-dark"
-                style={{ padding: '10px 22px', fontSize: '0.86rem' }}
-                onClick={() => {
-                  soundManager.playClick();
-                  setPendingSwitchGame(null);
-                }}
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
+        />
       )}
 
       {showExploreIntro && (
@@ -776,15 +748,7 @@ export const BentoCatalogView: React.FC = () => {
                       onAutoPinOnPlay={handleAutoPinOnPlay}
                       onToggleFavorite={toggleFavorite}
                       onVote={handleVote}
-                      onClose={() => {
-                        setActiveGame(null);
-                        setIsCameraPinned(false);
-                        setIsGameCurrentlyRunning(false);
-                        const vw = viewportRef.current?.clientWidth || window.innerWidth - 92;
-                        setZoomLevel(computeAutoZoom(vw));
-                        appliedRouteAliasRef.current = null;
-                        navigate('/', { replace: true });
-                      }}
+                      onClose={handleCloseActiveGame}
                       onPlayingChange={setIsGameCurrentlyRunning}
                     />
                   ) : (
@@ -798,7 +762,7 @@ export const BentoCatalogView: React.FC = () => {
                         onMouseEnter={() => {
                           soundManager.playHover();
                           setHoveredId(game.id);
-                          setLastHoveredGame(game);
+                          //setLastHoveredGame(game);
                         }}
                         onMouseLeave={() => setHoveredId(null)}
                         onClick={() => handleSelectGame(game)}
@@ -853,12 +817,12 @@ export const BentoCatalogView: React.FC = () => {
                   onMouseEnter={() => {
                     soundManager.playHover();
                     setHoveredId(game.id);
-                    setLastHoveredGame(game);
                   }}
                   onMouseLeave={() => setHoveredId(null)}
                   onClick={() => handleSelectGame(game)}
                 >
                   <div className="wiiu-channel-inner">
+                    {recommendedIds.has(game.id) && <CatalogCardBadge label="RECOMENDADO" />}
                     <img
                       src={isHovered && game.previewGifUrl ? game.previewGifUrl : game.coverUrl}
                       alt={game.title}
@@ -890,12 +854,13 @@ export const BentoCatalogView: React.FC = () => {
                 onMouseEnter={() => {
                   soundManager.playHover();
                   setHoveredId(game.id);
-                  setLastHoveredGame(game);
+                  //setLastHoveredGame(game);
                 }}
                 onMouseLeave={() => setHoveredId(null)}
                 onClick={() => handleSelectGame(game)}
               >
                 <div className="game-card-inner-clip">
+                  {recommendedIds.has(game.id) && <CatalogCardBadge label="RECOMENDADO" />}
                   <img
                     src={isHovered && game.previewGifUrl ? game.previewGifUrl : game.coverUrl}
                     alt={game.title}
@@ -928,11 +893,10 @@ export const BentoCatalogView: React.FC = () => {
           onClick={() => {
             soundManager.playClose();
             killGlobalRuffleInstance();
-            setActiveGame(null);
-            setIsGameCurrentlyRunning(false);
             window.dispatchEvent(
               new CustomEvent('udo_game_playing_state', { detail: { playing: false } })
             );
+            handleCloseActiveGame();
           }}
         >
           <GameViewerStage
@@ -942,65 +906,17 @@ export const BentoCatalogView: React.FC = () => {
             isExplorationMode={false}
             onToggleFavorite={toggleFavorite}
             onVote={handleVote}
-            onClose={() => {
-              setActiveGame(null);
-              setIsGameCurrentlyRunning(false);
-              appliedRouteAliasRef.current = null;
-              navigate('/', { replace: true });
-            }}
+            onClose={handleCloseActiveGame}
             onPlayingChange={setIsGameCurrentlyRunning}
           />
         </div>
       )}
 
-      {viewMode === 'exploration' && lastHoveredGame && !activeGame && (
-        <div
-          className="friv-companion-bubble"
-          onClick={() => handleSelectGame(lastHoveredGame)}
-          title="Haz clic para abrir el último juego visto"
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '0.66rem', fontWeight: 700, color: 'var(--accent-gold)', letterSpacing: '0.6px' }}>
-              ÚLTIMO VISTO
-            </span>
-            <span style={{ fontSize: '0.66rem', background: 'rgba(0,0,0,0.45)', padding: '2px 7px', borderRadius: '99px' }}>
-              {lastHoveredGame.categories[0]}
-            </span>
-          </div>
-
-          <div
-            style={{
-              width: '100%',
-              height: '82px',
-              borderRadius: '14px',
-              overflow: 'hidden',
-              border: '2px solid rgba(255,255,255,0.45)',
-            }}
-          >
-            <img
-              src={lastHoveredGame.coverUrl}
-              alt={lastHoveredGame.title}
-              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-            />
-          </div>
-
-          <div>
-            <div
-              style={{
-                fontSize: '0.88rem',
-                fontWeight: 700,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              {lastHoveredGame.title}
-            </div>
-            <div style={{ fontSize: '0.68rem', color: '#e2dcf0' }}>
-              Clic aquí para expandir
-            </div>
-          </div>
-        </div>
+      {viewMode === 'exploration' && !activeGame && (
+        <RecommendedBubblesTray
+          recommendedGames={recommendedGames}
+          onSelectGame={handleSelectGame}
+        />
       )}
 
       {!activeGame && (
@@ -1173,7 +1089,7 @@ export const BentoCatalogView: React.FC = () => {
         </footer>
       )}
 
-      {viewMode !== 'exploration' && <MorrocoyaEasterEgg />}
+      {viewMode !== 'exploration' && <PetWalkerEasterEgg />}
     </div>
   );
 };

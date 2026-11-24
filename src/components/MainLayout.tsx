@@ -1,14 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { MAIN_THEME_URL, soundManager } from '../data/audioConfig';
+import { GeneralChatDrawer } from './GeneralChatDrawer';
+import { UserSettingsPopover } from './UserSettingsPopOver';
 import '../pages/CatalogStyles.css';
-
-interface GeneralChatMessage {
-  id: number;
-  sender: string;
-  text: string;
-  time: string;
-}
 
 export const MainLayout: React.FC = () => {
   const navigate = useNavigate();
@@ -33,14 +28,7 @@ export const MainLayout: React.FC = () => {
   const userLevel = 7;
   const userCurrentXp = 680;
   const userNextLevelXp = 1000;
-  const userXpPercent = Math.round((userCurrentXp / userNextLevelXp) * 100);
-
-  // Placeholder temporal del Chat hasta enchufar el componente del Grupo Rojo
-  const [chatInput, setChatInput] = useState<string>('');
-  const [messages, setMessages] = useState<GeneralChatMessage[]>([
-    { id: 1, sender: 'laura_gamer', text: 'Bienvenido al chat general de gamesUDONE.', time: '16:10' },
-    { id: 2, sender: 'Ruben_Dev', text: 'Espacio listo para integrar el módulo del Grupo Rojo.', time: '16:12' },
-  ]);
+  //const userXpPercent = Math.round((userCurrentXp / userNextLevelXp) * 100);
 
   useEffect(() => {
     localStorage.setItem('udo_low_spec', String(lowSpecMode));
@@ -56,7 +44,6 @@ export const MainLayout: React.FC = () => {
     );
   }, [isChatDrawerOpen]);
 
-  // Auto-pausa el tema principal cuando empieza un juego y lo reanuda al cerrar
   useEffect(() => {
     const handleGamePlaying = (e: Event) => {
       const custom = e as CustomEvent<{ playing: boolean }>;
@@ -74,7 +61,6 @@ export const MainLayout: React.FC = () => {
     return () => window.removeEventListener('udo_game_playing_state', handleGamePlaying);
   }, [musicEnabled]);
 
-  // Desbloquea la reproducción del tema único tras el primer clic del usuario
   useEffect(() => {
     const unlockAudioOnFirstClick = () => {
       if (musicEnabled && !pausedByGame && audioRef.current && audioRef.current.paused) {
@@ -100,32 +86,10 @@ export const MainLayout: React.FC = () => {
     });
   };
 
-  const handleSendChatMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!chatInput.trim()) return;
-    soundManager.playClick();
-
-    const now = new Date();
-    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        sender: 'Rayner_UDO',
-        text: chatInput.trim(),
-        time: timeStr,
-      },
-    ]);
-    setChatInput('');
-  };
-
   return (
     <div className={`y2k-app-shell ${lowSpecMode ? 'low-spec-mode' : ''}`}>
-      {/* Tema musical único en bucle */}
       <audio ref={audioRef} src={MAIN_THEME_URL} loop />
 
-      {/* 1. FONDO GLOBAL */}
       <div className="lava-lamp-container" aria-hidden="true">
         <svg
           className="ghost-fibers-svg"
@@ -143,7 +107,6 @@ export const MainLayout: React.FC = () => {
         <div className="lava-blob blob-2" />
       </div>
 
-      {/* 2. SIDEBAR IZQUIERDA (MÓDULOS EXTERNOS DESACOPLADOS) */}
       <aside className="y2k-left-sidebar" aria-label="Navegación Principal">
         <svg className="sidebar-svg-bg" viewBox="0 0 92 1000" preserveAspectRatio="none">
           <path
@@ -196,7 +159,6 @@ export const MainLayout: React.FC = () => {
             </svg>
           </NavLink>
 
-          {/* Hooks preparados para los módulos de los demás equipos */}
           <button
             type="button"
             className="sidebar-nav-btn"
@@ -281,142 +243,32 @@ export const MainLayout: React.FC = () => {
         </div>
       </aside>
 
-      {/* POPUP DE CONFIGURACIÓN SIMPLIFICADO (SIN TEMAS, SIN REPRODUCTOR, SIN TECLADO MÓVIL) */}
-      {isUserPodOpen && (
-        <div className="tactile-panel sidebar-settings-popover">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div
-                onClick={() => {
-                  soundManager.playClick();
-                  alert('Módulo externo: Editor de Avatar (Grupo Blanco)');
-                }}
-                title="Avatar de usuario"
-                style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '12px 3px 12px 3px',
-                  background: 'linear-gradient(135deg, var(--primary-top), var(--primary-bot))',
-                  border: '2px solid #ffffff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#ffffff',
-                  cursor: 'pointer',
-                  flexShrink: 0,
-                  overflow: 'hidden',
-                }}
-              >
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                  <circle cx="12" cy="8" r="4.5" />
-                  <path d="M20 21a8 8 0 0 0-16 0" />
-                </svg>
-              </div>
+      <UserSettingsPopover
+        isOpen={isUserPodOpen}
+        userLevel={userLevel}
+        userCurrentXp={userCurrentXp}
+        userNextLevelXp={userNextLevelXp}
+        musicEnabled={musicEnabled}
+        sfxEnabled={sfxEnabled}
+        lowSpecMode={lowSpecMode}
+        onToggleMusic={handleToggleMusicSwitch}
+        onToggleSfx={() => {
+          const next = !sfxEnabled;
+          setSfxEnabled(next);
+          soundManager.setSfxEnabled(next);
+          if (next) soundManager.playClick();
+        }}
+        onToggleLowSpec={() => {
+          soundManager.playClick();
+          setLowSpecMode((prev) => !prev);
+        }}
+        onClose={() => setIsUserPodOpen(false)}
+      />
 
-              <div>
-                <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-main)' }}>Rayner_UDO</div>
-                <div style={{ fontSize: '0.76rem', color: 'var(--accent-gold)', fontWeight: 600 }}>
-                  Nivel {userLevel} — {userCurrentXp}/{userNextLevelXp} XP
-                </div>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              className="icon-close-x-btn"
-              onClick={() => {
-                soundManager.playClose();
-                setIsUserPodOpen(false);
-              }}
-              title="Cerrar configuración"
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-          </div>
-
-          <div className="xp-progress-track">
-            <div className="xp-progress-fill" style={{ width: `${userXpPercent}%` }} />
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <div
-              className="y2k-toggle-row"
-              onClick={handleToggleMusicSwitch}
-              role="switch"
-              aria-checked={musicEnabled}
-            >
-              <span>Música de Fondo</span>
-              <div className={`y2k-switch-pill ${musicEnabled ? 'checked' : ''}`}>
-                <div className="y2k-switch-thumb" />
-              </div>
-            </div>
-
-            <div
-              className="y2k-toggle-row"
-              onClick={() => {
-                const next = !sfxEnabled;
-                setSfxEnabled(next);
-                soundManager.setSfxEnabled(next);
-                if (next) soundManager.playClick();
-              }}
-              role="switch"
-              aria-checked={sfxEnabled}
-            >
-              <span>Sonidos de Interfaz</span>
-              <div className={`y2k-switch-pill ${sfxEnabled ? 'checked' : ''}`}>
-                <div className="y2k-switch-thumb" />
-              </div>
-            </div>
-
-            <div
-              className="y2k-toggle-row"
-              onClick={() => {
-                soundManager.playClick();
-                setLowSpecMode((prev) => !prev);
-              }}
-              role="switch"
-              aria-checked={lowSpecMode}
-            >
-              <span>Modo Bajo Rendimiento</span>
-              <div className={`y2k-switch-pill ${lowSpecMode ? 'checked' : ''}`}>
-                <div className="y2k-switch-thumb" />
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              type="button"
-              className="tactile-btn-dark"
-              style={{ flex: 1, padding: '8px', fontSize: '0.8rem' }}
-              onClick={() => {
-                soundManager.playClick();
-                alert('Módulo externo: Editor de Avatar (Grupo Blanco)');
-              }}
-            >
-              Editar Avatar
-            </button>
-            <button
-              type="button"
-              className="tactile-btn-dark"
-              style={{ flex: 1, padding: '8px', fontSize: '0.8rem', color: 'var(--accent-crimson)' }}
-              onClick={() => alert('Cerrando sesión...')}
-            >
-              Salir
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 3. ESCENARIO CENTRAL */}
       <main className="y2k-main-stage">
         <Outlet />
       </main>
 
-      {/* 4. PANEL LATERAL DERECHO — SLOT PARA EL CHAT DEL GRUPO ROJO */}
       {!isChatDrawerOpen && (
         <button
           type="button"
@@ -437,97 +289,10 @@ export const MainLayout: React.FC = () => {
         </button>
       )}
 
-      <aside className={`y2k-right-chat-drawer ${!isChatDrawerOpen ? 'closed' : ''}`} aria-label="Chat General">
-        <div
-          style={{
-            padding: '12px 16px',
-            background: 'var(--panel-inset-bg)',
-            borderBottom: 'var(--border-thick) solid var(--panel-border-outer)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <strong style={{ fontSize: '0.95rem', color: 'var(--text-main)' }}>CHAT GENERAL</strong>
-          <button
-            type="button"
-            className="icon-close-x-btn"
-            onClick={() => {
-              soundManager.playClose();
-              setIsChatDrawerOpen(false);
-            }}
-            title="Cerrar Chat"
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
-        </div>
-
-        {/* SLOT DEL GRUPO ROJO: Reemplazar el contenido inferior por <ChatModule /> */}
-        <div
-          style={{
-            flex: 1,
-            padding: '14px',
-            overflowY: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '10px',
-          }}
-        >
-          {messages.map((msg) => (
-            <div
-              key={msg.id}
-              style={{
-                background: 'var(--panel-card-bg)',
-                color: 'var(--text-main)',
-                padding: '9px 12px',
-                borderRadius: '10px',
-                borderLeft: '4px solid var(--primary-top)',
-                fontSize: '0.86rem',
-              }}
-            >
-              <div>
-                <strong style={{ color: 'var(--accent-gold)', marginRight: 6 }}>{msg.sender}:</strong>
-                <span>{msg.text}</span>
-              </div>
-              <small style={{ color: 'var(--text-dim)', fontSize: '0.7rem' }}>{msg.time}</small>
-            </div>
-          ))}
-        </div>
-
-        <form
-          onSubmit={handleSendChatMessage}
-          style={{
-            padding: '12px',
-            background: 'var(--panel-inset-bg)',
-            borderTop: 'var(--border-thick) solid var(--panel-border-outer)',
-            display: 'flex',
-            gap: '8px',
-          }}
-        >
-          <input
-            type="text"
-            value={chatInput}
-            onChange={(e) => setChatInput(e.target.value)}
-            placeholder="Escribe en el chat..."
-            style={{
-              flex: 1,
-              background: 'var(--panel-card-bg)',
-              border: '2px solid var(--panel-border-outer)',
-              borderRadius: '10px',
-              padding: '8px 10px',
-              color: 'var(--text-main)',
-              outline: 'none',
-              fontSize: '0.86rem',
-            }}
-          />
-          <button type="submit" className="tactile-btn-purple" style={{ padding: '0 14px', fontSize: '0.84rem' }}>
-            Enviar
-          </button>
-        </form>
-      </aside>
+      <GeneralChatDrawer
+        isOpen={isChatDrawerOpen}
+        onClose={() => setIsChatDrawerOpen(false)}
+      />
     </div>
   );
 };
