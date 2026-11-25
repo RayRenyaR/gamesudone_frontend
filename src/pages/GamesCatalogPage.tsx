@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { type Game, fetchCatalogGames, slugifyGameAlias } from '../data/gamesData';
-import { resolveRecommendedGames } from '../data/recommendationsEngine';
+import { resolveRecommendedGames } from '../services/recommendationsEngine';
 import { CATALOG_AD_SLOTS } from '../data/adSlotsData';
 import { useSeasonalTheme } from '../data/seasonalThemes';
 import { soundManager } from '../data/audioConfig';

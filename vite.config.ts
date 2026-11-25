@@ -4,4 +4,8 @@ import { defineConfig } from 'vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-})
+  //el chat lo necesitaba
+  define: {
+    global: 'window',
+  },
+});

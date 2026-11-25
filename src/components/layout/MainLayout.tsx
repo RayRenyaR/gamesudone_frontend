@@ -6,7 +6,7 @@ import { UserSettingsPopover } from './UserSettingsPopOver';
 import { useSeasonalTheme } from '../../data/seasonalThemes';
 import { SeasonalBackdropLayer } from '../seasonal/SeasonalBackdropLayer';
 import { SantaHatOverlay } from '../seasonal/SeasonalDecorations';
-import '../../pages/CatalogStyles.css';
+import '../../styles/PlatformStyles.css';
 
 export const MainLayout: React.FC = () => {
   const navigate = useNavigate();
@@ -127,7 +127,7 @@ export const MainLayout: React.FC = () => {
 
       <SeasonalBackdropLayer themeId={seasonalTheme.id} lowSpecMode={lowSpecMode} />
       
-      <aside className="y2k-left-sidebar" aria-label="Navegación Principal">
+      <aside className="platform-left-sidebar" aria-label="Navegación Principal">
         <svg className="sidebar-svg-bg" viewBox="0 0 92 1000" preserveAspectRatio="none">
           <path
             d="M 0,0 L 90,0 L 90,104 L 66,142 L 66,858 L 90,896 L 90,1000 L 0,1000 Z"
@@ -293,7 +293,7 @@ export const MainLayout: React.FC = () => {
 
       />
 
-      <main className="y2k-main-stage" 
+      <main className="platform-main-stage" 
         
       >
         <Outlet />

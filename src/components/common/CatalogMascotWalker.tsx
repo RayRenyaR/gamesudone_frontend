@@ -50,9 +50,9 @@ export const CatalogMascotWalker: React.FC = () => {
   };
 
   return (
-    <div className="morrocoya-easter-track" aria-hidden="true">
+    <div className="mascot-walker-track" aria-hidden="true">
       <div
-        className="morrocoya-walker"
+        className="mascot-walker"
         style={{ left: `${posX}px` }}
         onClick={handlePetClick}
       >
@@ -77,7 +77,7 @@ export const CatalogMascotWalker: React.FC = () => {
             </svg>
           )}
         </div>
-        {isScared && <span className="morrocoya-shell-tooltip">{pet.clickMessage}</span>}
+        {isScared && <span className="mascot-tooltip">{pet.clickMessage}</span>}
       </div>
     </div>
   );
