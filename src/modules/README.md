@@ -29,26 +29,5 @@ Los módulos no necesitan reimplementar la navegación ni los estilos base. Pued
 3. **Dimensiones flexibles:** El contenedor principal del módulo debe adaptarse al espacio asignado (`width: 100%; height: 100%`) sin romper el layout padre.
 4. **Scroll controlado:** No usar `element.scrollIntoView()` dentro de paneles o cajones laterales, ya que puede desplazar el viewport global de la aplicación. Usar `container.scrollTop = container.scrollHeight` sobre el contenedor interno.
 5. **Dependencias y Props:** Recibir datos globales (como sesión de usuario o URLs de API) mediante `props` en lugar de acoplarse a almacenamiento externo o configuraciones hardcodeadas.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-pasame ahi 1000 bolos
-31571909
-0102
-04267304347
+6. Tope de z-index: La sidebar y el chat viven entre 1200 y 1350, y los modales globales en 1500–1700. Los módulos deben mantener sus z-index internos por debajo de 100 (o usar isolation: isolate).
+7. Sin librerías invasivas ni routers propios: No envolver su módulo en <BrowserRouter> ni instalar frameworks CSS con resets globales (como Bootstrap o MUI) sin avisar.

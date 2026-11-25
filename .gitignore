@@ -22,3 +22,20 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Binarios pesados de juegos (solo para pruebas locales)
+public/games-swf/*.swf
+public/game-export/
+
+# Variables de entorno
+.env
+.env.*
+!.env.example
+
+# Basura de Windows
+Thumbs.db
+desktop.ini
+
+# Binarios pesados de juegos (solo para pruebas locales)
+*.swf
+public/game-export/
