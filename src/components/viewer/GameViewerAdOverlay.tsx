@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { type ViewerAdTrigger } from '../data/adSlotsData';
-import { soundManager } from '../data/audioConfig';
+import { type ViewerAdTrigger } from '../../data/adSlotsData';
+import { soundManager } from '../../data/audioConfig';
 
 interface GameViewerAdOverlayProps {
   trigger: ViewerAdTrigger;

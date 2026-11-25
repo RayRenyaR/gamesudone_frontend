@@ -5,11 +5,11 @@ import { resolveRecommendedGames } from '../data/recommendationsEngine';
 import { CATALOG_AD_SLOTS } from '../data/adSlotsData';
 import { useSeasonalTheme } from '../data/seasonalThemes';
 import { soundManager } from '../data/audioConfig';
-import { GameViewerStage } from '../components/GameViewerStage';
-import { killGlobalRuffleInstance } from '../components/RufflePlayer';
-import { Confirm3dsModal as ConfirmActionModal } from '../components/3dsConfirmModal';
-import { PetWalkerEasterEgg } from '../components/PetWalkerEasterEgg';
-import { RecommendedBubblesTray } from '../components/RecommendedBubblesTray';
+import { GameViewerStage } from '../components/viewer/GameViewerStage';
+import { killGlobalRuffleInstance } from '../components/viewer/RufflePlayer';
+import { ConfirmDialogModal as ConfirmActionModal } from '../components/common/ConfirmDialogModal';
+import { CatalogMascotWalker } from '../components/common/CatalogMascotWalker';
+import { RecommendedBubblesTray } from '../components/catalog/RecommendedBubblesTray';
 import { GraphCatalogView } from '../components/catalog/GraphCatalogView';
 import { GridCatalogView } from '../components/catalog/GridCatalogView';
 import { CatalogToolbar } from '../components/catalog/CatalogToolbar';
@@ -483,7 +483,7 @@ export const GamesCatalogPage: React.FC = () => {
         />
       )}
 
-      {viewMode !== 'graph' && <PetWalkerEasterEgg />}
+      {viewMode !== 'graph' && <CatalogMascotWalker />}
     </div>
   );
 };

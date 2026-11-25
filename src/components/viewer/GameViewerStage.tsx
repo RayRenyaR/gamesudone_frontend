@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { type Game, DEFAULT_LEADERBOARD, slugifyGameAlias } from '../data/gamesData';
+import { type Game, DEFAULT_LEADERBOARD, slugifyGameAlias } from '../../data/gamesData';
 import { RufflePlayer, killGlobalRuffleInstance } from './RufflePlayer';
-import { Confirm3dsModal } from './3dsConfirmModal';
-import { soundManager } from '../data/audioConfig';
+import { ConfirmDialogModal } from '../common/ConfirmDialogModal';
+import { soundManager } from '../../data/audioConfig';
 import {
   type ViewerAdTrigger,
   shouldShowPreRollMock,
   shouldShowPostRollMock,
-} from '../data/adSlotsData';
+} from '../../data/adSlotsData';
 import { GameViewerAdOverlay } from './GameViewerAdOverlay';
 
 interface GameViewerStageProps {
@@ -294,7 +294,7 @@ export const GameViewerStage: React.FC<GameViewerStageProps> = ({
       onClick={(e) => e.stopPropagation()}
     >
       {show3dsClosePrompt && (
-        <Confirm3dsModal
+        <ConfirmDialogModal
           badgeText="SALIR DEL SOFTWARE"
           title={`Cerrar ${game.title}`}
           description="Se cerrara la partida actual y se liberara su audio. Los datos no guardados se perderan."

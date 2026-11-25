@@ -1,5 +1,5 @@
 import React from 'react';
-import { type SeasonalThemeId, shouldGameWearFestiveHat } from '../data/seasonalThemes';
+import { type SeasonalThemeId, shouldGameWearFestiveHat } from '../../data/seasonalThemes';
 
 interface SantaHatProps {
   variant?: 'card' | 'avatar' | 'orb';

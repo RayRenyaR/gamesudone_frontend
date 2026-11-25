@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { type Game } from '../data/gamesData';
-import { soundManager } from '../data/audioConfig';
+import { type Game } from '../../data/gamesData';
+import { soundManager } from '../../data/audioConfig';
 
 interface RecommendedBubblesTrayProps {
   recommendedGames: Game[];

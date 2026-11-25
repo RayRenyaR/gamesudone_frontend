@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { type SeasonalThemeId } from '../data/seasonalThemes';
+import { type SeasonalThemeId } from '../../data/seasonalThemes';
 
 interface SeasonalBackdropLayerProps {
   themeId: SeasonalThemeId;

@@ -3,9 +3,9 @@ import { type Game } from '../../data/gamesData';
 import { type CatalogAdSlot } from '../../data/adSlotsData';
 import { type SeasonalThemeId } from '../../data/seasonalThemes';
 import { soundManager } from '../../data/audioConfig';
-import { GameViewerStage } from '../GameViewerStage';
-import { CatalogCardBadge } from '../CatalogCardBadge';
-import { GameSeasonalOverlay } from '../SeasonalDecorations';
+import { GameViewerStage } from '../viewer/GameViewerStage';
+import { CatalogCardBadge } from './CatalogCardBadge';
+import { GameSeasonalOverlay } from '../seasonal/SeasonalDecorations';
 import {
   type GraphNodePos,
   type GraphEdge,

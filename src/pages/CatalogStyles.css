@@ -143,7 +143,7 @@ textarea {
 /* ==========================================================================
    3. FONDO GLOBAL: GHOST FIBERS + LAMPARA DE LAVA Y2K
    ========================================================================== */
-.y2k-app-shell {
+.platform-app-shell {
   position: relative;
   height: 100vh;
   width: 100vw;
@@ -452,7 +452,7 @@ textarea {
   transition: width 0.4s ease;
 }
 
-.y2k-toggle-row {
+.settings-toggle-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -467,7 +467,7 @@ textarea {
   color: var(--text-main);
 }
 
-.y2k-switch-pill {
+.settings-switch-pill {
   position: relative;
   width: 42px;
   height: 22px;
@@ -478,12 +478,12 @@ textarea {
   transition: background 0.25s ease, border-color 0.25s ease;
 }
 
-.y2k-switch-pill.checked {
+.settings-switch-pill.checked {
   background: linear-gradient(90deg, var(--primary-mid), var(--primary-top));
   border-color: #ffffff;
 }
 
-.y2k-switch-thumb {
+.settings-switch-thumb {
   position: absolute;
   top: 2px;
   left: 2px;
@@ -495,7 +495,7 @@ textarea {
   transition: transform 0.25s var(--ease-squish);
 }
 
-.y2k-switch-pill.checked .y2k-switch-thumb {
+.settings-switch-pill.checked .settings-switch-thumb {
   transform: translateX(19px);
 }
 
@@ -644,7 +644,7 @@ textarea {
   border-color: #fff3b0;
 }
 
-.wiiu-channel-tile.is-favorite-card {
+.catalog-channel-tile.is-favorite-card {
   border-color: var(--accent-gold);
   box-shadow:
     0 12px 24px rgba(0, 0, 0, 0.45),
@@ -1156,7 +1156,7 @@ textarea {
 /* ==========================================================================
    10. MODO BENTO, WII U, MODAL INTRO Y MASCOTA EASTER EGG
    ========================================================================== */
-.friv-bento-grid {
+.catalog-mosaic-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(195px, 1fr));
   grid-auto-rows: 165px;
@@ -1164,28 +1164,28 @@ textarea {
   gap: 20px;
 }
 
-.friv-bento-grid .size-hero {
+.catalog-mosaic-grid .size-hero {
   grid-column: span 2;
   grid-row: span 2;
 }
 
-.friv-bento-grid .size-wide {
+.catalog-mosaic-grid .size-wide {
   grid-column: span 2;
   grid-row: span 1;
 }
 
-.friv-bento-grid .size-tall {
+.catalog-mosaic-grid .size-tall {
   grid-column: span 1;
   grid-row: span 2;
 }
 
-.wiiu-channel-grid {
+.catalog-channel-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(205px, 1fr));
   gap: 22px;
 }
 
-.wiiu-channel-tile {
+.catalog-channel-tile {
   position: relative;
   height: 178px;
   border-radius: 30px;
@@ -1205,7 +1205,7 @@ textarea {
   color: var(--text-main);
 }
 
-.wiiu-channel-tile:hover {
+.catalog-channel-tile:hover {
   transform: translateY(-7px) scale(1.06, 0.97);
   border-color: #ffffff;
   box-shadow:
@@ -1214,11 +1214,11 @@ textarea {
     inset 0 4px 8px rgba(255, 255, 255, 0.9);
 }
 
-.wiiu-channel-tile:active {
+.catalog-channel-tile:active {
   transform: translateY(2px) scale(0.96, 1.04);
 }
 
-.wiiu-channel-inner {
+.catalog-channel-inner {
   flex: 1;
   border-radius: 22px;
   overflow: hidden;
@@ -1567,7 +1567,7 @@ textarea {
 /* ==========================================================================
    SISTEMA DE TEMAS FESTIVOS: NAVIDAD
    ========================================================================== */
-.y2k-app-shell[data-seasonal="christmas"] {
+.platform-app-shell[data-seasonal="christmas"] {
   --bg-grad-top: #114b36;
   --bg-grad-mid: #0a2922;
   --bg-grad-bot: #051314;

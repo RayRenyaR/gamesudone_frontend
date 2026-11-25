@@ -16,7 +16,7 @@ const PET_PRESETS: Record<string, PetConfig> = {
   },
 };
 
-export const PetWalkerEasterEgg: React.FC = () => {
+export const CatalogMascotWalker: React.FC = () => {
   const [posX, setPosX] = useState<number>(0);
   const [direction, setDirection] = useState<1 | -1>(1);
   const [isScared, setIsScared] = useState<boolean>(false);

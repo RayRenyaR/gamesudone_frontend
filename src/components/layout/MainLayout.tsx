@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { MAIN_THEME_URL, soundManager } from '../data/audioConfig';
+import { MAIN_THEME_URL, soundManager } from '../../data/audioConfig';
 import { GeneralChatDrawer } from './GeneralChatDrawer';
 import { UserSettingsPopover } from './UserSettingsPopOver';
-import { useSeasonalTheme } from '../data/seasonalThemes';
-import { SeasonalBackdropLayer } from './SeasonalBackdropLayer';
-import { SantaHatOverlay } from './SeasonalDecorations';
-import '../pages/CatalogStyles.css';
+import { useSeasonalTheme } from '../../data/seasonalThemes';
+import { SeasonalBackdropLayer } from '../seasonal/SeasonalBackdropLayer';
+import { SantaHatOverlay } from '../seasonal/SeasonalDecorations';
+import '../../pages/CatalogStyles.css';
 
 export const MainLayout: React.FC = () => {
   const navigate = useNavigate();
@@ -110,7 +110,7 @@ export const MainLayout: React.FC = () => {
 
   return (
     <div
-      className={`y2k-app-shell ${lowSpecMode ? 'low-spec-mode' : ''}`}
+      className={`platform-app-shell ${lowSpecMode ? 'low-spec-mode' : ''}`}
       data-seasonal={seasonalTheme.id}
     >
       <audio

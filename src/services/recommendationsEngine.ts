@@ -1,4 +1,4 @@
-import { type Game } from './gamesData';
+import { type Game } from '../data/gamesData';
 
 interface RecommendationInput {
   allGames: Game[];

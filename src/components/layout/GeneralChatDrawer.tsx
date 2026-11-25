@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { soundManager } from '../data/audioConfig';
+import { soundManager } from '../../data/audioConfig';
 
 interface GeneralChatMessage {
   id: number;

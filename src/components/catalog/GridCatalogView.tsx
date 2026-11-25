@@ -4,8 +4,8 @@ import { type CatalogAdSlot } from '../../data/adSlotsData';
 import { type SeasonalThemeId } from '../../data/seasonalThemes';
 import { type CatalogGridItem } from '../../services/catalogLayoutEngine';
 import { soundManager } from '../../data/audioConfig';
-import { CatalogCardBadge } from '../CatalogCardBadge';
-import { GameSeasonalOverlay } from '../SeasonalDecorations';
+import { CatalogCardBadge } from './CatalogCardBadge';
+import { GameSeasonalOverlay } from '../seasonal/SeasonalDecorations';
 
 interface GridCatalogViewProps {
   layoutVariant: 'mosaic' | 'channels';
@@ -22,11 +22,11 @@ const renderAdTile = (ad: CatalogAdSlot, layoutVariant: 'mosaic' | 'channels') =
     return (
       <div
         key={ad.id}
-        className="wiiu-channel-tile pop-item-enter ad-slot-card-border"
+        className="catalog-channel-tile pop-item-enter ad-slot-card-border"
         onClick={() => soundManager.playClick()}
         title={`Espacio publicitario: ${ad.slotCode}`}
       >
-        <div className="wiiu-channel-inner ad-card-surface">
+        <div className="catalog-channel-inner ad-card-surface">
           <CatalogCardBadge label="ANUNCIO" />
           <div className="ad-card-copy">
             <span className="ad-slot-code">{ad.slotCode}</span>
@@ -82,7 +82,7 @@ export const GridCatalogView: React.FC<GridCatalogViewProps> = ({
   const [hoveredGameId, setHoveredGameId] = useState<number | null>(null);
 
   return (
-    <div className={layoutVariant === 'mosaic' ? 'friv-bento-grid' : 'wiiu-channel-grid'}>
+    <div className={layoutVariant === 'mosaic' ? 'catalog-mosaic-grid' : 'catalog-channel-grid'}>
       {items.map((item) => {
         if (item.kind === 'ad') {
           return renderAdTile(item.data, layoutVariant);
@@ -99,7 +99,7 @@ export const GridCatalogView: React.FC<GridCatalogViewProps> = ({
           return (
             <div
               key={key}
-              className={`wiiu-channel-tile pop-item-enter ${isFav ? 'is-favorite-card' : ''}`}
+              className={`catalog-channel-tile pop-item-enter ${isFav ? 'is-favorite-card' : ''}`}
               onMouseEnter={() => {
                 soundManager.playHover();
                 setHoveredGameId(game.id);
@@ -108,7 +108,7 @@ export const GridCatalogView: React.FC<GridCatalogViewProps> = ({
               onClick={() => onSelectGame(game)}
             >
               <GameSeasonalOverlay themeId={seasonalThemeId} gameId={game.id} />
-              <div className="wiiu-channel-inner">
+              <div className="catalog-channel-inner">
                 {isRec && <CatalogCardBadge label="RECOMENDADO" />}
                 <img
                   src={isHovered && game.previewGifUrl ? game.previewGifUrl : game.coverUrl}

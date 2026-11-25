@@ -1,7 +1,7 @@
 import React from 'react';
-import { soundManager } from '../data/audioConfig';
-import { type SeasonalOverride, type SeasonalThemeId } from '../data/seasonalThemes';
-import { SantaHatOverlay } from './SeasonalDecorations';
+import { soundManager } from '../../data/audioConfig';
+import { type SeasonalOverride, type SeasonalThemeId } from '../../data/seasonalThemes';
+import { SantaHatOverlay } from '../seasonal/SeasonalDecorations';
 
 interface UserSettingsPopoverProps {
   isOpen: boolean;
@@ -108,38 +108,38 @@ export const UserSettingsPopover: React.FC<UserSettingsPopoverProps> = ({
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <div
-          className="y2k-toggle-row"
+          className="settings-toggle-row"
           onClick={onToggleMusic}
           role="switch"
           aria-checked={musicEnabled}
         >
           <span>Musica de Fondo</span>
-          <div className={`y2k-switch-pill ${musicEnabled ? 'checked' : ''}`}>
-            <div className="y2k-switch-thumb" />
+          <div className={`settings-switch-pill ${musicEnabled ? 'checked' : ''}`}>
+            <div className="settings-switch-thumb" />
           </div>
         </div>
 
         <div
-          className="y2k-toggle-row"
+          className="settings-toggle-row"
           onClick={onToggleSfx}
           role="switch"
           aria-checked={sfxEnabled}
         >
           <span>Sonidos de Interfaz</span>
-          <div className={`y2k-switch-pill ${sfxEnabled ? 'checked' : ''}`}>
-            <div className="y2k-switch-thumb" />
+          <div className={`settings-switch-pill ${sfxEnabled ? 'checked' : ''}`}>
+            <div className="settings-switch-thumb" />
           </div>
         </div>
 
         <div
-          className="y2k-toggle-row"
+          className="settings-toggle-row"
           onClick={onToggleLowSpec}
           role="switch"
           aria-checked={lowSpecMode}
         >
           <span>Modo Bajo Rendimiento</span>
-          <div className={`y2k-switch-pill ${lowSpecMode ? 'checked' : ''}`}>
-            <div className="y2k-switch-thumb" />
+          <div className={`settings-switch-pill ${lowSpecMode ? 'checked' : ''}`}>
+            <div className="settings-switch-thumb" />
           </div>
 
         
@@ -148,7 +148,7 @@ export const UserSettingsPopover: React.FC<UserSettingsPopoverProps> = ({
         </div>
       
       {onChangeSeasonalOverride && (
-          <div className="y2k-toggle-row" style={{ cursor: 'default', flexDirection: 'column', alignItems: 'stretch', gap: '7px' }}>
+          <div className="settings-toggle-row" style={{ cursor: 'default', flexDirection: 'column', alignItems: 'stretch', gap: '7px' }}>
             <span>Tema Festivo</span>
             <div style={{ display: 'flex', gap: '6px' }}>
               {(

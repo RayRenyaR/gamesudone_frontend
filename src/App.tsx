@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { MainLayout } from './components/MainLayout';
+import { MainLayout } from './components/layout/MainLayout';
 import { GamesCatalogPage } from './pages/GamesCatalogPage';
 
 function App() {

@@ -1,6 +1,6 @@
 import React from 'react';
 
-interface Confirm3dsModalProps {
+interface ConfirmDialogModalProps {
   badgeText: string;
   title: string;
   description: string;
@@ -11,7 +11,7 @@ interface Confirm3dsModalProps {
   onCancel: () => void;
 }
 
-export const Confirm3dsModal: React.FC<Confirm3dsModalProps> = ({
+export const ConfirmDialogModal: React.FC<ConfirmDialogModalProps> = ({
   badgeText,
   title,
   description,
