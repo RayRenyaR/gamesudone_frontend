@@ -6,14 +6,11 @@ import { UserSettingsPopover } from './UserSettingsPopOver';
 import { useSeasonalTheme } from '../data/seasonalThemes';
 import { SeasonalBackdropLayer } from './SeasonalBackdropLayer';
 import { SantaHatOverlay } from './SeasonalDecorations';
-import { useLocation } from 'react-router-dom';
 import '../pages/CatalogStyles.css';
 
 export const MainLayout: React.FC = () => {
   const navigate = useNavigate();
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const location = useLocation();
-  const isDeveloperRoute = location.pathname.startsWith('/developer');
 
   const [lowSpecMode, setLowSpecMode] = useState<boolean>(() => {
     return localStorage.getItem('udo_low_spec') === 'true';
@@ -130,7 +127,6 @@ export const MainLayout: React.FC = () => {
 
       <SeasonalBackdropLayer themeId={seasonalTheme.id} lowSpecMode={lowSpecMode} />
       
-      {!isDeveloperRoute && (
       <aside className="y2k-left-sidebar" aria-label="Navegación Principal">
         <svg className="sidebar-svg-bg" viewBox="0 0 92 1000" preserveAspectRatio="none">
           <path
@@ -267,7 +263,7 @@ export const MainLayout: React.FC = () => {
           </button>
         </div>
       </aside>
-      )}
+      
 
       <UserSettingsPopover
         
@@ -298,12 +294,12 @@ export const MainLayout: React.FC = () => {
       />
 
       <main className="y2k-main-stage" 
-        style={isDeveloperRoute ? { marginLeft: 0, padding: 0, width: '100%' } : undefined}
+        
       >
         <Outlet />
       </main>
 
-      {!isChatDrawerOpen && !isDeveloperRoute && (
+      {!isChatDrawerOpen && (
         <button
           type="button"
           className="right-chat-pull-tab"
