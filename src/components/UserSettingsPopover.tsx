@@ -2,6 +2,7 @@ import React from 'react';
 import { soundManager } from '../data/audioConfig';
 import { type SeasonalOverride, type SeasonalThemeId } from '../data/seasonalThemes';
 import { SantaHatOverlay } from './SeasonalDecorations';
+import { useNavigate } from 'react-router-dom';
 
 interface UserSettingsPopoverProps {
   isOpen: boolean;
@@ -39,7 +40,10 @@ export const UserSettingsPopover: React.FC<UserSettingsPopoverProps> = ({
   seasonalOverride = 'auto',
   onChangeSeasonalOverride,
 }) => {
+  const navigate = useNavigate();
+
   if (!isOpen) return null;
+  
 
   const xpPercent = Math.min(100, Math.round((userCurrentXp / userNextLevelXp) * 100));
 
@@ -174,6 +178,32 @@ export const UserSettingsPopover: React.FC<UserSettingsPopoverProps> = ({
         )}
 
       </div>
+
+<button
+        type="button"
+        className="tactile-btn-purple"
+        style={{
+          width: '100%',
+          padding: '9px 12px',
+          fontSize: '0.82rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+        }}
+        onClick={() => {
+          soundManager.playOpen();
+          onClose();
+          navigate('/developer');
+        }}
+      >
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+          <polyline points="16 18 22 12 16 6" />
+          <polyline points="8 6 2 12 8 18" />
+        </svg>
+        <span>Developer Portal</span>
+      </button>
+
 
       <div style={{ display: 'flex', gap: '8px' }}>
         <button
